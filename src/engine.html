@@ -206,6 +206,29 @@ window.MathJax = {
   .minichart { margin-top: 12px; }
   .minichart .mc-title { font-size: 11.5px; color: var(--ink-dim); margin-bottom: 5px; }
   .minichart svg { width: 100%; height: auto; display: block; }
+  /* code blocks */
+  pre.code { background:#0b0d12; border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow-x:auto; margin:11px 0; position:relative; }
+  pre.code code { font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size:12.5px; line-height:1.6; white-space:pre; color:#cdd3e0; display:block; }
+  pre.code[data-lang]::before { content:attr(data-lang); position:absolute; top:6px; right:10px; font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); opacity:.7; }
+  .tok-kw   { color:#c792ea; font-weight:600; }
+  .tok-str  { color:#a3d977; }
+  .tok-num  { color:#f0a866; }
+  .tok-com  { color:#6a7385; font-style:italic; }
+  .tok-fn   { color:#5b9dff; }
+  .tok-type { color:#5fb0a8; }
+  .tok-ann  { color:#d56f7a; }
+  /* comparison tables */
+  .cmp-wrap { overflow-x:auto; margin:11px 0; }
+  table.cmp { border-collapse:collapse; width:100%; font-size:13px; }
+  table.cmp th, table.cmp td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+  table.cmp th { background:var(--panel2); color:var(--ink-dim); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; }
+  table.cmp tr.win td { background:rgba(70,211,154,.10); }
+  table.cmp tr.win td:first-child { color:#46d39a; font-weight:600; }
+  /* console */
+  .console { background:#0b0d12; border:1px solid var(--line); border-radius:10px; overflow:hidden; margin:11px 0; font-family:'JetBrains Mono', ui-monospace, monospace; font-size:12.5px; }
+  .console .con-cmd { padding:9px 12px; color:#e7e9ee; border-bottom:1px solid var(--line); }
+  .console .con-prompt { color:#46d39a; user-select:none; }
+  .console .con-out { padding:9px 12px; color:#9aa3b2; white-space:pre-wrap; }
   .memory { background: rgba(139,124,255,.13); border-left: 3px solid var(--accent2); border-radius: 8px; padding: 8px 12px 8px 34px; font-size: 13px; margin: 0 0 14px; position: relative; }
   .memory::before { content: "🧠"; position: absolute; left: 11px; top: 8px; }
   .trap { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.4); border-radius: 10px; padding: 10px 13px; font-size: 13.5px; margin: 16px 0; }
@@ -288,6 +311,92 @@ function usd(n){ return '$' + Math.round(n).toLocaleString(); }
 function svgEl(tag, attrs){ const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
 
 /* ============================================================================
+   CODE — dependency-free, multi-language syntax highlighter + content helpers.
+   Output is wrapped in <pre class="code"> so the auto-linker, dollar-escaper,
+   and MathJax all skip it.  Use CODE(lang, src) inside any card/glossary string.
+   ============================================================================ */
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function WORDS(s){ return new Set((s||'').trim().split(/\s+/).filter(Boolean)); }
+const LANG_KW = {
+  java:'abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for goto if implements import instanceof int interface long native new package private protected public return short static strictfp super switch synchronized this throw throws transient try void volatile while var record sealed permits yield non-sealed true false null',
+  scala:'abstract case catch class def do else extends false final finally for forSome given if implicit import lazy match new null object override package private protected return sealed super this throw trait try true type val var while with yield using export then enum inline',
+  python:'False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield match case self async',
+  sql:'select from where group by having order limit offset join inner left right outer full cross on as and or not in exists between like ilike is null distinct union all intersect except insert into values update set delete create table alter drop index view materialized with recursive partition over window rank dense_rank row_number lag lead case when then else end cast count sum avg min max coalesce nullif primary key foreign references default constraint unique check',
+  bash:'if then else elif fi for while do done case esac function in select until time echo printf export local readonly return set unset source eval exec trap shift getopts cd',
+  yaml:'true false null yes no on off',
+  json:'true false null',
+  groovy:'def class if else for while return new import package try catch finally throw assert in as switch case default boolean int long double float String void static final private public protected true false null this' };
+const LANG_TYPES = {
+  java:'String Integer Long Double Boolean Float Short Byte Character Object List ArrayList Map HashMap Set HashSet Optional Stream Collection Iterator Runnable Callable Future CompletableFuture Exception RuntimeException void int long double boolean byte char float short',
+  scala:'String Int Long Double Boolean Float Byte Char Unit Any AnyRef AnyVal Nothing List Seq Vector Map Set Option Some None Either Try Future Array Iterator',
+  python:'str int float bool bytes list dict set tuple frozenset None Exception ValueError KeyError TypeError',
+  sql:'INT INTEGER BIGINT SMALLINT DECIMAL NUMERIC FLOAT DOUBLE REAL VARCHAR CHAR TEXT BOOLEAN DATE TIMESTAMP TIME INTERVAL JSON JSONB UUID SERIAL' };
+const LINECOM = { java:['//'], scala:['//'], groovy:['//'], sql:['--'], python:['#'], bash:['#'], yaml:['#'], json:[] };
+const BLOCKCOM = { java:1, scala:1, groovy:1, sql:1 };
+const BACKTICK = { scala:1, groovy:1 };
+const _reCache = {};
+function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function buildCodeRe(lang){
+  const com=[];
+  if(BLOCKCOM[lang]) com.push('/\\*[\\s\\S]*?\\*/');
+  const lc=LINECOM[lang]||[]; if(lc.length) com.push('(?:'+lc.map(escRe).join('|')+')[^\\n]*');
+  const parts=[];
+  if(com.length) parts.push('(?<com>'+com.join('|')+')');
+  parts.push('(?<str>"""[\\s\\S]*?"""|\\x27\\x27\\x27[\\s\\S]*?\\x27\\x27\\x27|"(?:\\\\.|[^"\\\\\\n])*"|\\x27(?:\\\\.|[^\\x27\\\\\\n])*\\x27'+(BACKTICK[lang]?'|`(?:\\\\.|[^`\\\\])*`':'')+')');
+  parts.push('(?<num>0[xXbB][0-9a-fA-F_]+|\\d[\\d_]*(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFlLdD]?)');
+  parts.push('(?<ann>@[A-Za-z_]\\w*)');
+  parts.push('(?<id>[A-Za-z_$][\\w$]*)');
+  return new RegExp(parts.join('|'),'gy');
+}
+function HIGHLIGHT(lang, code){
+  lang=(lang||'').toLowerCase();
+  const re=_reCache[lang]||(_reCache[lang]=buildCodeRe(lang));
+  const kw=WORDS(LANG_KW[lang]), types=WORDS(LANG_TYPES[lang]);
+  let i=0,out='';
+  while(i<code.length){
+    re.lastIndex=i; const m=re.exec(code);
+    if(m && m.index===i){
+      const g=m.groups, txt=m[0];
+      if(g.com) out+='<span class="tok-com">'+escHtml(txt)+'</span>';
+      else if(g.str) out+='<span class="tok-str">'+escHtml(txt)+'</span>';
+      else if(g.num) out+='<span class="tok-num">'+escHtml(txt)+'</span>';
+      else if(g.ann) out+='<span class="tok-ann">'+escHtml(txt)+'</span>';
+      else if(g.id!=null){
+        const low=lang==='sql'?txt.toLowerCase():txt;
+        const isCall=/^\s*\(/.test(code.slice(i+txt.length));
+        if(kw.has(low)) out+='<span class="tok-kw">'+escHtml(txt)+'</span>';
+        else if(types.has(txt)||(/^[A-Z]/.test(txt)&&lang!=='sql')) out+='<span class="tok-type">'+escHtml(txt)+'</span>';
+        else if(isCall) out+='<span class="tok-fn">'+escHtml(txt)+'</span>';
+        else out+=escHtml(txt);
+      } else out+=escHtml(txt);
+      i+=txt.length;
+    } else { out+=escHtml(code[i]); i++; }
+  }
+  return '<pre class="code no-link" data-lang="'+escHtml(lang)+'"><code>'+out+'</code></pre>';
+}
+/* CODE(lang, src) — trims a leading newline + common indentation so template
+   literals read naturally in source. */
+function CODE(lang, src){
+  src=String(src).replace(/^\n/,'').replace(/\s+$/,'');
+  const lines=src.split('\n');
+  let min=Infinity; lines.forEach(l=>{ if(l.trim()){ const m=l.match(/^[ \t]*/)[0].length; if(m<min) min=m; } });
+  if(min!==Infinity && min>0) src=lines.map(l=>l.slice(min)).join('\n');
+  return HIGHLIGHT(lang, src);
+}
+/* TABLE({headers, rows, highlight}) — comparison table; highlight = winning row indices set bold/green */
+function TABLE(spec){
+  spec=spec||{}; const hi=new Set(spec.highlight||[]);
+  let h='<div class="cmp-wrap no-link"><table class="cmp"><thead><tr>'+(spec.headers||[]).map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  (spec.rows||[]).forEach((r,ri)=>{ h+='<tr'+(hi.has(ri)?' class="win"':'')+'>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>'; });
+  return h+'</tbody></table></div>';
+}
+/* CONSOLE({cmd, out, prompt}) — terminal chrome with a dimmed command + output */
+function CONSOLE(spec){
+  spec=spec||{};
+  return '<div class="console no-link"><div class="con-cmd"><span class="con-prompt">'+escHtml(spec.prompt||'$')+'</span> '+escHtml(spec.cmd||'')+'</div>'+(spec.out!=null?'<div class="con-out">'+escHtml(spec.out)+'</div>':'')+'</div>';
+}
+
+/* ============================================================================
    SWE INTERACTIVE GRAPHICS  (sequence/boxes factories + concept widgets)
    added during engine adaptation
    ============================================================================ */
@@ -328,6 +437,7 @@ function autolink(root, opts){
       while(p && p !== root){
         const tag = p.nodeName;
         if(tag==='A'||tag==='SCRIPT'||tag==='STYLE'||tag==='BUTTON'||tag==='SUMMARY') return NodeFilter.FILTER_REJECT;
+        if(tag==='PRE'||tag==='CODE') return NodeFilter.FILTER_REJECT;  // never link inside code blocks
         if(tag==='SVG'||tag==='svg'||tag.indexOf('MJX')===0) return NodeFilter.FILTER_REJECT;  // never touch rendered math or graphics
         if(p.classList && (p.classList.contains('term')||p.classList.contains('no-link'))) return NodeFilter.FILTER_REJECT;
         p = p.parentNode;
@@ -360,9 +470,10 @@ function autolink(root, opts){
    NOT part of a "$$" display-math opener. Runs before MathJax typesets. */
 function escapeCurrencyDollars(root){
   let re; try{ re = /(?<!\$)\$(?=\d)/g; }catch(e){ re = /\$(?=\d)/g; }
+  function inCode(n){ let p=n.parentNode; while(p && p!==root){ if(p.nodeName==='PRE'||p.nodeName==='CODE') return true; p=p.parentNode; } return false; }
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
-  for(const n of nodes){ if(n.nodeValue.indexOf('$')>=0 && /\$\d/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(re, '\\$'); }
+  for(const n of nodes){ if(inCode(n)) continue; if(n.nodeValue.indexOf('$')>=0 && /\$\d/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(re, '\\$'); }
 }
 function typesetThenLink(el, opts){
   try{ escapeCurrencyDollars(el); }catch(e){}

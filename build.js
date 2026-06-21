@@ -43,6 +43,10 @@ function build() {
 
 function validate(html) {
   const r = { cards: 0, glossary: 0, quiz: 0, graphics: 0, syntaxErrors: [], deadRelated: [], deadGraphics: [], badSec: [] };
+  // content uses CODE/TABLE/CONSOLE/HIGHLIGHT helpers; stub them so data evals
+  const S = function () { return ''; };
+  const ev = (code) => new Function('CODE', 'TABLE', 'CONSOLE', 'HIGHLIGHT', 'return (' + code + ')')(S, S, S, S);
+  const evArr = (code) => new Function('CODE', 'TABLE', 'CONSOLE', 'HIGHLIGHT', 'return [' + code + ']')(S, S, S, S);
   // syntax-check every inline script
   const sre = /<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g; let m, i = 0;
   while ((m = sre.exec(html))) {
@@ -58,21 +62,21 @@ function validate(html) {
   const SECTIONS = {};
   let s; const sse = /SECTIONS_DATA\[['"]([A-Za-z0-9_-]+)['"]\]\s*=/g; while ((s = sse.exec(html))) SECTIONS[s[1]] = 1;
   const seo = /Object\.assign\(SECTIONS_DATA,\s*(\{[\s\S]*?\n\}\))\s*\)?;/g; let so;
-  while ((so = seo.exec(html))) { try { Object.assign(SECTIONS, new Function('return ' + so[1].replace(/\)$/, ''))()); } catch (e) {} }
+  while ((so = seo.exec(html))) { try { Object.assign(SECTIONS, ev(so[1].replace(/\)$/, ''))); } catch (e) {} }
   // glossary (Object.assign(GLOSSARY_DATA, {...}))
   const G = {}; const are = /Object\.assign\(GLOSSARY_DATA,\s*(\{[\s\S]*?\n\}\))\s*\)?;/g; let a;
-  while ((a = are.exec(html))) { try { Object.assign(G, new Function('return ' + a[1].replace(/\)$/, ''))()); } catch (e) {} }
+  while ((a = are.exec(html))) { try { Object.assign(G, ev(a[1].replace(/\)$/, ''))); } catch (e) {} }
   r.glossary = Object.keys(G).length;
   // enh overlay (so related on enh-only entries still validates)
   const E = {}; const ere = /(?:^|\W)enh\((\{[\s\S]*?\n\}\))\s*\)?;/g; let e2;
-  while ((e2 = ere.exec(html))) { try { const o = new Function('return ' + e2[1].replace(/\)$/, ''))(); for (const k in o) E[k] = Object.assign(E[k] || {}, o[k]); } catch (e) {} }
+  while ((e2 = ere.exec(html))) { try { const o = ev(e2[1].replace(/\)$/, '')); for (const k in o) E[k] = Object.assign(E[k] || {}, o[k]); } catch (e) {} }
   const ids = new Set([...Object.keys(G), ...Object.keys(E)]);
   // cards
   const cre = /CARDS_DATA\.push\(([\s\S]*?)\n\s*\);/g; let c2;
-  while ((c2 = cre.exec(html))) { try { const arr = new Function('return [' + c2[1] + ']')(); arr.forEach(card => { r.cards++; if (card && card.sec && !SECTIONS[card.sec]) r.badSec.push(card.sec); }); } catch (e) {} }
+  while ((c2 = cre.exec(html))) { try { const arr = evArr(c2[1]); arr.forEach(card => { r.cards++; if (card && card.sec && !SECTIONS[card.sec]) r.badSec.push(card.sec); }); } catch (e) {} }
   // quiz count
   const qre = /QUIZ_DATA\.push\(([\s\S]*?)\n\s*\);/g; let q2;
-  while ((q2 = qre.exec(html))) { try { r.quiz += new Function('return [' + q2[1] + ']')().length; } catch (e) {} }
+  while ((q2 = qre.exec(html))) { try { r.quiz += evArr(q2[1]).length; } catch (e) {} }
   // dead-link checks
   for (const id of ids) {
     const e = Object.assign({}, G[id] || {}, E[id] || {});
