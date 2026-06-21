@@ -5,7 +5,7 @@
    Content waves add topic codes here and tag their cards with them.
    ============================================================================ */
 DECKS_DATA.push(
-  { id:"foundations", name:"Foundations — CS & System Design",      color:"#7c98c8", topics:[] },
+  { id:"foundations", name:"Foundations — CS & System Design",      color:"#7c98c8", topics:["FND-BIGO","FND-DS","FND-ALGO","FND-SYS","FND-CAP","FND-NET","FND-CONC","FND-HASH","FND-CACHE","FND-LB","FND-RL","FND-API"] },
   { id:"streaming",   name:"Distributed Systems & Streaming",        color:"#5fb0a8", topics:["MSG","DELIV"] },
   { id:"architecture",name:"Software Architecture & Design",          color:"#8b7cff", topics:["EDA"] },
   { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:[] },
@@ -19,10 +19,24 @@ DECKS_DATA.push(
   { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:[] }
 );
 
-/* topic codes -> display names (demo slice) */
+/* topic codes -> display names */
 Object.assign(SECTIONS_DATA, {
+  // demo slice (Distributed Systems & Streaming / Architecture / Lakehouse)
   "EDA":       "Event-Driven Architecture",
   "MSG":       "Reliable Messaging",
   "DELIV":     "Delivery Semantics",
-  "MEDALLION": "Medallion Architecture"
+  "MEDALLION": "Medallion Architecture",
+  // Foundations — CS & System Design
+  "FND-BIGO":  "Complexity & Big-O",
+  "FND-DS":    "Core Data Structures",
+  "FND-ALGO":  "Algorithms & Problem-Solving",
+  "FND-SYS":   "System Design Building Blocks",
+  "FND-CAP":   "Consistency, CAP & PACELC",
+  "FND-NET":   "Networking",
+  "FND-CONC":  "Concurrency & Parallelism",
+  "FND-HASH":  "Hashing & Consistent Hashing",
+  "FND-CACHE": "Caching & Eviction",
+  "FND-LB":    "Load Balancing & Proxies",
+  "FND-RL":    "Rate Limiting & Backpressure",
+  "FND-API":   "API Design & Protocols"
 });
