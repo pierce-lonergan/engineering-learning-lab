@@ -229,6 +229,10 @@ window.MathJax = {
   .console .con-cmd { padding:9px 12px; color:#e7e9ee; border-bottom:1px solid var(--line); }
   .console .con-prompt { color:#46d39a; user-select:none; }
   .console .con-out { padding:9px 12px; color:#9aa3b2; white-space:pre-wrap; }
+  /* diagrams (sequence / boxes) */
+  .diagram { background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px 10px; margin:12px 0; overflow-x:auto; }
+  .diagram .dg-title { font-size:12px; color:var(--ink-dim); margin:0 0 6px 6px; font-weight:600; }
+  .diagram svg { display:block; max-width:100%; height:auto; }
   .memory { background: rgba(139,124,255,.13); border-left: 3px solid var(--accent2); border-radius: 8px; padding: 8px 12px 8px 34px; font-size: 13px; margin: 0 0 14px; position: relative; }
   .memory::before { content: "🧠"; position: absolute; left: 11px; top: 8px; }
   .trap { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.4); border-radius: 10px; padding: 10px 13px; font-size: 13.5px; margin: 16px 0; }
@@ -394,6 +398,73 @@ function TABLE(spec){
 function CONSOLE(spec){
   spec=spec||{};
   return '<div class="console no-link"><div class="con-cmd"><span class="con-prompt">'+escHtml(spec.prompt||'$')+'</span> '+escHtml(spec.cmd||'')+'</div>'+(spec.out!=null?'<div class="con-out">'+escHtml(spec.out)+'</div>':'')+'</div>';
+}
+
+/* ----- diagram factories: SEQUENCE (UML) + BOXES (architecture), as inline SVG strings ----- */
+let _dgN = 0;
+/* SEQUENCE({title?, actors:[{id,label}], messages:[{from,to,label,kind?,note?,color?}]})
+   kind: 'sync'(default, solid+filled head) | 'async'(open head) | 'return'(dashed) ; from===to => self-call */
+function SEQUENCE(spec){
+  spec=spec||{}; const A=spec.actors||[], M=spec.messages||[];
+  const n=Math.max(1,A.length);
+  const lane=Math.max(110, Math.min(180, Math.floor(700/n)));
+  const padX=18, topH=42, rowH=44, botPad=16;
+  const W=padX*2+lane*n, H=topH+12+M.length*rowH+botPad;
+  const xOf=i=> padX+lane*i+lane/2;
+  const idx={}; A.forEach((a,i)=>{ idx[a.id]=i; });
+  const uid=++_dgN, AR='dgA'+uid, OP='dgO'+uid;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" font-family="Inter, system-ui, sans-serif">';
+  s+='<defs><marker id="'+AR+'" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0L7 3L0 6Z" fill="#7c98c8"/></marker>';
+  s+='<marker id="'+OP+'" markerWidth="11" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0 0L8 3L0 6" fill="none" stroke="#7c98c8" stroke-width="1.3"/></marker></defs>';
+  A.forEach((a,i)=>{ const x=xOf(i);
+    s+='<rect x="'+(x-lane*0.42).toFixed(1)+'" y="8" width="'+(lane*0.84).toFixed(1)+'" height="26" rx="6" fill="#1e222b" stroke="#3a4150"/>';
+    s+='<text x="'+x.toFixed(1)+'" y="25" text-anchor="middle" font-size="12" font-weight="600" fill="#cdd3e0">'+escHtml(a.label)+'</text>';
+    s+='<line x1="'+x.toFixed(1)+'" y1="34" x2="'+x.toFixed(1)+'" y2="'+(H-8)+'" stroke="#2a2f3a" stroke-width="1.5" stroke-dasharray="4 4"/>';
+  });
+  M.forEach((m,k)=>{ const y=topH+12+rowH*k+rowH*0.55;
+    const i=idx[m.from], j=idx[m.to], xi=xOf(i), xj=xOf(j);
+    const col=m.color||'#8aa6d6', dash=m.kind==='return'?' stroke-dasharray="6 4"':'', mk=m.kind==='async'?OP:AR;
+    if(m.from===m.to){
+      s+='<path d="M'+xi.toFixed(1)+' '+(y-9)+' h30 v18 h-30" fill="none" stroke="'+col+'" stroke-width="1.5" marker-end="url(#'+mk+')"/>';
+      s+='<text x="'+(xi+36).toFixed(1)+'" y="'+(y-3)+'" font-size="11" fill="#9aa3b2">'+escHtml(m.label)+'</text>';
+    } else {
+      const x2=(xj+(xj>xi?-6:6)).toFixed(1);
+      s+='<line x1="'+xi.toFixed(1)+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+col+'" stroke-width="1.6"'+dash+' marker-end="url(#'+mk+')"/>';
+      s+='<text x="'+((xi+xj)/2).toFixed(1)+'" y="'+(y-7)+'" text-anchor="middle" font-size="11" fill="#cdd3e0">'+escHtml(m.label)+'</text>';
+      if(m.note) s+='<text x="'+((xi+xj)/2).toFixed(1)+'" y="'+(y+13)+'" text-anchor="middle" font-size="9.5" fill="#6a7385" font-style="italic">'+escHtml(m.note)+'</text>';
+    }
+  });
+  s+='</svg>';
+  return '<div class="diagram no-link">'+(spec.title?'<div class="dg-title">'+escHtml(spec.title)+'</div>':'')+s+'</div>';
+}
+/* BOXES({title?, nodeW?, nodes:[{id,label,col,row,color?}], edges:[{from,to,label?,dashed?}]})
+   Grid layout via 0-based col/row. Edges auto-connect nearest box edges. */
+function BOXES(spec){
+  spec=spec||{}; const N=spec.nodes||[], E=spec.edges||[];
+  let maxC=0,maxR=0; N.forEach(n=>{ maxC=Math.max(maxC,n.col||0); maxR=Math.max(maxR,n.row||0); });
+  const nodeW=spec.nodeW||132, nodeH=46, gapX=46, gapY=34, padX=16, padY=16, titleH=spec.title?22:0;
+  const W=padX*2+(maxC+1)*nodeW+maxC*gapX, H=padY*2+titleH+(maxR+1)*nodeH+maxR*gapY;
+  const xOf=c=>padX+c*(nodeW+gapX), yOf=r=>padY+titleH+r*(nodeH+gapY);
+  const pos={}; N.forEach(n=>{ const x=xOf(n.col||0), y=yOf(n.row||0); pos[n.id]={x,y,w:nodeW,h:nodeH,cx:x+nodeW/2,cy:y+nodeH/2}; });
+  const uid=++_dgN, AR='bx'+uid;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" font-family="Inter, system-ui, sans-serif">';
+  s+='<defs><marker id="'+AR+'" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0L7 3L0 6Z" fill="#7c98c8"/></marker></defs>';
+  if(spec.title) s+='<text x="'+padX+'" y="15" font-size="12" font-weight="600" fill="#9aa3b2">'+escHtml(spec.title)+'</text>';
+  E.forEach(e=>{ const a=pos[e.from], b=pos[e.to]; if(!a||!b) return;
+    const dx=b.cx-a.cx, dy=b.cy-a.cy; let x1,y1,x2,y2;
+    if(Math.abs(dx)>=Math.abs(dy)){ if(dx>=0){ x1=a.x+a.w; x2=b.x; } else { x1=a.x; x2=b.x+b.w; } y1=a.cy; y2=b.cy; }
+    else { if(dy>=0){ y1=a.y+a.h; y2=b.y; } else { y1=a.y; y2=b.y+b.h; } x1=a.cx; x2=b.cx; }
+    const ex=x2-(x2>x1?6:(x2<x1?-6:0)), ey=y2-(y2>y1?6:(y2<y1?-6:0)), dash=e.dashed?' stroke-dasharray="6 4"':'';
+    s+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+ex.toFixed(1)+'" y2="'+ey.toFixed(1)+'" stroke="#5a6376" stroke-width="1.6"'+dash+' marker-end="url(#'+AR+')"/>';
+    if(e.label) s+='<text x="'+((x1+x2)/2).toFixed(1)+'" y="'+((y1+y2)/2-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#9aa3b2">'+escHtml(e.label)+'</text>';
+  });
+  N.forEach(n=>{ const p=pos[n.id], c=n.color||'#5b9dff';
+    s+='<rect x="'+p.x+'" y="'+p.y+'" width="'+p.w+'" height="'+p.h+'" rx="8" fill="#1b1f27" stroke="'+c+'" stroke-width="1.5"/>';
+    s+='<rect x="'+p.x+'" y="'+p.y+'" width="4" height="'+p.h+'" rx="2" fill="'+c+'"/>';
+    s+='<text x="'+p.cx.toFixed(1)+'" y="'+(p.cy+4).toFixed(1)+'" text-anchor="middle" font-size="11.5" font-weight="600" fill="#dde2ec">'+escHtml(n.label)+'</text>';
+  });
+  s+='</svg>';
+  return '<div class="diagram no-link">'+s+'</div>';
 }
 
 /* ============================================================================

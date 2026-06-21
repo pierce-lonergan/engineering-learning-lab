@@ -45,8 +45,10 @@ function validate(html) {
   const r = { cards: 0, glossary: 0, quiz: 0, graphics: 0, syntaxErrors: [], deadRelated: [], deadGraphics: [], badSec: [] };
   // content uses CODE/TABLE/CONSOLE/HIGHLIGHT helpers; stub them so data evals
   const S = function () { return ''; };
-  const ev = (code) => new Function('CODE', 'TABLE', 'CONSOLE', 'HIGHLIGHT', 'return (' + code + ')')(S, S, S, S);
-  const evArr = (code) => new Function('CODE', 'TABLE', 'CONSOLE', 'HIGHLIGHT', 'return [' + code + ']')(S, S, S, S);
+  const H = ['CODE', 'TABLE', 'CONSOLE', 'HIGHLIGHT', 'SEQUENCE', 'BOXES', 'DIAGRAM'];
+  const args = H.map(() => S);
+  const ev = (code) => new Function(...H, 'return (' + code + ')')(...args);
+  const evArr = (code) => new Function(...H, 'return [' + code + ']')(...args);
   // syntax-check every inline script
   const sre = /<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g; let m, i = 0;
   while ((m = sre.exec(html))) {
