@@ -6,7 +6,7 @@
    ============================================================================ */
 DECKS_DATA.push(
   { id:"foundations", name:"Foundations — CS & System Design",      color:"#7c98c8", topics:["FND-BIGO","FND-DS","FND-ALGO","FND-SYS","FND-CAP","FND-NET","FND-CONC","FND-HASH","FND-CACHE","FND-LB","FND-RL","FND-API"] },
-  { id:"streaming",   name:"Distributed Systems & Streaming",        color:"#5fb0a8", topics:["MSG","DELIV"] },
+  { id:"streaming",   name:"Distributed Systems & Streaming",        color:"#5fb0a8", topics:["MSG","DELIV","DSS-KAFKA","DSS-PART","DSS-CONSUMER","DSS-PROC","DSS-TIME","DSS-EOS","DSS-CONSENSUS","DSS-COORD","DSS-CLOCK","DSS-TXN","DSS-SCALE"] },
   { id:"architecture",name:"Software Architecture & Design",          color:"#8b7cff", topics:["EDA"] },
   { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:[] },
   { id:"jvm",         name:"Java & the JVM",                          color:"#e07a5c", topics:[] },
@@ -21,11 +21,23 @@ DECKS_DATA.push(
 
 /* topic codes -> display names */
 Object.assign(SECTIONS_DATA, {
-  // demo slice (Distributed Systems & Streaming / Architecture / Lakehouse)
-  "EDA":       "Event-Driven Architecture",
-  "MSG":       "Reliable Messaging",
-  "DELIV":     "Delivery Semantics",
-  "MEDALLION": "Medallion Architecture",
+  // demo slice (Streaming / Architecture / Lakehouse)
+  "EDA":          "Event-Driven Architecture",
+  "MSG":          "Reliable Messaging",
+  "DELIV":        "Delivery Semantics",
+  "MEDALLION":    "Medallion Architecture",
+  // Distributed Systems & Streaming
+  "DSS-KAFKA":    "Kafka Architecture & Internals",
+  "DSS-PART":     "Partitioning & Ordering",
+  "DSS-CONSUMER": "Consumer Groups & Offsets",
+  "DSS-PROC":     "Stream Processing & State",
+  "DSS-TIME":     "Event Time, Watermarks & Windowing",
+  "DSS-EOS":      "Exactly-Once Streaming",
+  "DSS-CONSENSUS":"Consensus & Replicated Logs",
+  "DSS-COORD":    "Coordination & Leader Election",
+  "DSS-CLOCK":    "Time & Causality",
+  "DSS-TXN":      "Distributed Transactions & Sagas",
+  "DSS-SCALE":    "Streaming at Scale & Failure",
   // Foundations — CS & System Design
   "FND-BIGO":  "Complexity & Big-O",
   "FND-DS":    "Core Data Structures",
