@@ -135,6 +135,17 @@ window.MathJax = {
   .explain.show { display: block; }
   .explain .why { color: var(--ink-dim); }
   .scorebar { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; color: var(--ink-dim); font-size: 13px; }
+  /* review / spaced repetition */
+  .due-badge { display:none; background:#d56f7a; color:#fff; font-size:10px; font-weight:700; line-height:1; border-radius:999px; padding:2px 6px; margin-left:3px; vertical-align:middle; }
+  .rv-sub { color: var(--ink-dim); font-size: 13.5px; margin: 6px 0 16px; }
+  .rv-grades { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:16px; }
+  .rv-g { border:1px solid var(--line); background:var(--panel2); color:var(--ink); padding:12px 6px; border-radius:11px; cursor:pointer; font-size:14px; font-weight:600; transition:.12s; position:relative; }
+  .rv-g:hover { transform:translateY(-1px); }
+  .rv-g small { display:block; font-size:10px; opacity:.6; font-weight:500; margin-top:2px; }
+  .rv-again { border-color:rgba(255,107,107,.55); color:#ff6b6b; }
+  .rv-hard  { border-color:rgba(255,159,67,.55);  color:#ff9f43; }
+  .rv-good  { border-color:rgba(91,157,255,.55);  color:#5b9dff; }
+  .rv-easy  { border-color:rgba(70,211,154,.55);  color:#46d39a; }
   .progress { height: 6px; background: var(--panel); border-radius: 999px; overflow: hidden; flex: 1; }
   .progress > div { height: 100%; background: var(--accent); width: 0%; }
 
@@ -272,6 +283,7 @@ window.MathJax = {
     <button class="tab" data-mode="explore">Explore</button>
     <button class="tab" data-mode="test">Quiz</button>
     <button class="tab" data-mode="exam">Exam</button>
+    <button class="tab" data-mode="review">Review <span class="due-badge" id="dueBadge"></span></button>
   </div>
   <div class="search">
     <input id="searchBox" type="text" placeholder="Search any concept…" autocomplete="off">
@@ -752,7 +764,8 @@ function render(){
   if(mode==='study') renderStudy(v);
   else if(mode==='explore') renderExplore(v);
   else if(mode==='test') renderTest(v);
-  else renderExam(v);
+  else if(mode==='exam') renderExam(v);
+  else renderReview(v);
 }
 
 /* ---------- STUDY ---------- */
@@ -1027,6 +1040,83 @@ document.addEventListener('click', e=>{ if(!e.target.closest('.search')) searchR
 /* ============================================================================
    BOOT
    ============================================================================ */
+/* ============================================================================
+   SPACED REPETITION — Review mode (Leitner / SM-2-lite) + localStorage scheduler.
+   Degrades to in-memory if storage is blocked; never blocks Study/Quiz.
+   ============================================================================ */
+const SRS_KEY='ell_srs_v1';
+let _srs=null;
+function srsLoad(){ if(_srs) return _srs; try{ const r=localStorage.getItem(SRS_KEY); _srs=r?JSON.parse(r):{}; }catch(e){ _srs={}; } return _srs; }
+function srsSave(){ try{ localStorage.setItem(SRS_KEY, JSON.stringify(_srs||{})); }catch(e){} }
+function cardId(c){ if(c._id) return c._id; const s=(c.sec||'')+'|'+(c.front||''); let h=5381; for(let i=0;i<s.length;i++) h=((h*33)^s.charCodeAt(i))>>>0; return (c._id='k'+h.toString(36)); }
+const SRS_DAY=86400000, SRS_BOX_DAYS=[0,1,3,7,16,35,90], SRS_NEW_PER=20;
+function srsGrade(c,q){ const st=srsLoad(), id=cardId(c), now=Date.now(); let s=st[id]||{box:0,due:0,reps:0,lapses:0};
+  if(q==='again'){ s.box=0; s.lapses=(s.lapses||0)+1; s.due=now+60000; }
+  else if(q==='hard'){ s.box=Math.max(1,s.box); s.due=now+Math.round(SRS_BOX_DAYS[s.box]*0.6*SRS_DAY); }
+  else if(q==='good'){ s.box=Math.min(6,s.box+1); s.due=now+SRS_BOX_DAYS[s.box]*SRS_DAY; }
+  else if(q==='easy'){ s.box=Math.min(6,s.box+2); s.due=now+Math.round(SRS_BOX_DAYS[s.box]*1.3*SRS_DAY); }
+  s.reps=(s.reps||0)+1; s.last=now; st[id]=s; srsSave(); return s; }
+function srsDueCount(){ const st=srsLoad(), now=Date.now(); let d=0; for(const c of CARDS){ const s=st[cardId(c)]; if(s && s.due<=now) d++; } return d; }
+function srsStats(){ const st=srsLoad(), now=Date.now(); const s={total:CARDS.length,seen:0,newCount:0,due:0,learning:0,young:0,mature:0};
+  for(const c of CARDS){ const x=st[cardId(c)]; if(!x){ s.newCount++; continue; } s.seen++; if(x.due<=now) s.due++; if(x.box<=2) s.learning++; else if(x.box<=4) s.young++; else s.mature++; } return s; }
+function updateDueBadge(){ const b=document.getElementById('dueBadge'); if(!b) return; const n=srsDueCount(); b.textContent=n>0?n:''; b.style.display=n>0?'inline-block':'none'; }
+function srsStatGrid(s){ const box=(k,v,c)=>'<div class="ro"><div class="k">'+k+'</div><div class="v" style="color:'+(c||'var(--ink)')+'">'+v+'</div></div>';
+  return '<div class="readout" style="margin-top:18px">'+box('Total',s.total)+box('New',s.newCount,'#9aa3b2')+box('Learning',s.learning,'#ff9f43')+box('Young',s.young,'#5b9dff')+box('Mature',s.mature,'#46d39a')+box('Due now',s.due,'#d56f7a')+'</div>'; }
+function buildReviewQueue(newOnly){ const st=srsLoad(), now=Date.now(); const due=[], fresh=[];
+  CARDS.forEach(c=>{ const s=st[cardId(c)]; if(!s) fresh.push(c); else if(s.due<=now) due.push({c,d:s.due}); });
+  due.sort((a,b)=>a.d-b.d);
+  return newOnly ? shuffle(fresh).slice(0,SRS_NEW_PER) : due.map(x=>x.c).concat(shuffle(fresh).slice(0,SRS_NEW_PER)); }
+let reviewState=null;
+function rvGradeAdvance(g, v){ const c=reviewState.queue[reviewState.pos]; if(!c) return; srsGrade(c,g); reviewState.res[g]++; reviewState.graded++; if(g==='again') reviewState.queue.push(c); reviewState.pos++; reviewState.shown=false; updateDueBadge(); renderReview(v); }
+function renderReview(v){
+  if(!reviewState){
+    const st=srsStats(), dueN=st.due, newAvail=st.newCount, startN=dueN+Math.min(SRS_NEW_PER,newAvail);
+    v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+      +'<div class="qtext">Spaced Repetition</div>'
+      +(startN>0
+         ? '<p class="rv-sub">'+dueN+' due'+(newAvail>0?' &middot; up to '+Math.min(SRS_NEW_PER,newAvail)+' new':'')+'</p><button class="btn primary" id="rvStart">Start review &middot; '+startN+'</button>'
+         : '<p class="rv-sub">🎉 All caught up — nothing due right now.</p>'+(st.seen<st.total?'<div style="margin-top:8px"><button class="btn" id="rvLearn">Learn new cards</button></div>':''))
+      +'</div>'+srsStatGrid(st)+'</div>';
+    const a=document.getElementById('rvStart'); if(a) a.onclick=()=>{ reviewState={queue:buildReviewQueue(false),pos:0,shown:false,graded:0,res:{again:0,hard:0,good:0,easy:0}}; renderReview(v); };
+    const l=document.getElementById('rvLearn'); if(l) l.onclick=()=>{ reviewState={queue:buildReviewQueue(true),pos:0,shown:false,graded:0,res:{again:0,hard:0,good:0,easy:0}}; renderReview(v); };
+    return;
+  }
+  if(reviewState.pos>=reviewState.queue.length) return renderReviewDone(v);
+  const c=reviewState.queue[reviewState.pos];
+  v.innerHTML='<div class="quiz-wrap">'
+    +'<div class="scorebar"><span>'+(reviewState.pos+1)+' / '+reviewState.queue.length+'</span><div class="progress"><div style="width:'+(reviewState.pos/reviewState.queue.length*100)+'%"></div></div><span>graded '+reviewState.graded+'</span></div>'
+    +'<div class="flash" id="rvFlash">'
+      +'<div class="sec">'+(SECTIONS[c.sec]||c.sec)+'</div>'
+      +(reviewState.shown?'<div class="ans">'+c.back+'</div>':'<div class="term-q">'+c.front+'</div>')
+      +'<div class="hint">'+(reviewState.shown?'How well did you recall it?':'Tap to reveal · Space')+'</div>'
+    +'</div>'
+    +(reviewState.shown
+      ? '<div class="rv-grades"><button class="rv-g rv-again" data-g="again">Again<small>1</small></button><button class="rv-g rv-hard" data-g="hard">Hard<small>2</small></button><button class="rv-g rv-good" data-g="good">Good<small>3</small></button><button class="rv-g rv-easy" data-g="easy">Easy<small>4</small></button></div>'
+      : '<div class="nav-row"><button class="btn primary" id="rvReveal">Reveal</button></div>')
+    +'</div>';
+  const flash=document.getElementById('rvFlash');
+  flash.onclick=(e)=>{ if(e.target.closest('.term')) return; if(!reviewState.shown){ reviewState.shown=true; renderReview(v); } };
+  if(reviewState.shown) typesetThenLink(flash.querySelector('.ans'),{}); else if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([flash]).catch(()=>{});
+  const rev=document.getElementById('rvReveal'); if(rev) rev.onclick=()=>{ reviewState.shown=true; renderReview(v); };
+  v.querySelectorAll('.rv-g').forEach(b=> b.onclick=()=> rvGradeAdvance(b.dataset.g, v));
+}
+function renderReviewDone(v){ const r=reviewState.res;
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+    +'<div class="qtext">Session complete</div>'
+    +'<div style="font-size:42px;font-weight:800;color:var(--accent)">'+reviewState.graded+'</div>'
+    +'<p class="rv-sub">'+r.good+' good &middot; '+r.easy+' easy &middot; '+r.hard+' hard &middot; '+r.again+' again</p>'
+    +'<button class="btn primary" id="rvBack">Back to review</button></div></div>';
+  document.getElementById('rvBack').onclick=()=>{ reviewState=null; updateDueBadge(); renderReview(v); };
+}
+/* Review keyboard: Space reveals, 1-4 grade */
+document.addEventListener('keydown', e=>{
+  if(mode!=='review' || !reviewState || reviewState.pos>=reviewState.queue.length) return;
+  if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  const v=document.getElementById('view');
+  if(e.key===' '){ if(!reviewState.shown){ e.preventDefault(); reviewState.shown=true; renderReview(v); } }
+  else if(reviewState.shown){ const map={'1':'again','2':'hard','3':'good','4':'easy'}; if(map[e.key]){ e.preventDefault(); rvGradeAdvance(map[e.key], v); } }
+});
+
 function boot(){
   Object.assign(SECTIONS, SECTIONS_DATA);
   CARDS.push(...CARDS_DATA);
@@ -1035,6 +1125,7 @@ function boot(){
   if(typeof ENHANCE !== 'undefined'){ for(const id in ENHANCE){ if(GLOSSARY[id]) Object.assign(GLOSSARY[id], ENHANCE[id]); else GLOSSARY[id]=ENHANCE[id]; } }
   QUIZ.push(...QUIZ_DATA);
   buildAlias();
+  updateDueBadge();
   render();
 }
 </script>
