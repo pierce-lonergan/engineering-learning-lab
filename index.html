@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering Learning Lab · Pierce Lonergan</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global' },
+  startup: { typeset: false }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel2: #1e222b;
+    --ink: #e7e9ee;
+    --ink-dim: #9aa3b2;
+    --line: #2a2f3a;
+    --accent: #5b9dff;
+    --accent2: #8b7cff;
+    --term: #7cc4ff;
+    --good: #46d39a;
+    --bad: #ff6b6b;
+    --warn: #ffcf5c;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+
+  /* ---------- Top bar ---------- */
+  header {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(15,17,21,0.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 18px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { font-weight: 800; font-size: 16px; letter-spacing: .2px; white-space: nowrap; }
+  .brand span { color: var(--accent); }
+  .tabs { display: flex; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+  .tab {
+    border: 0; background: transparent; color: var(--ink-dim);
+    padding: 7px 16px; border-radius: 999px; cursor: pointer; font-size: 13.5px; font-weight: 600;
+  }
+  .tab.active { background: var(--accent); color: #06122b; }
+  .search { margin-left: auto; position: relative; }
+  .search input {
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    padding: 9px 14px 9px 34px; border-radius: 999px; width: 240px; font-size: 13.5px; outline: none;
+  }
+  .search input:focus { border-color: var(--accent); }
+  .search::before { content: "⌕"; position: absolute; left: 12px; top: 7px; color: var(--ink-dim); font-size: 16px; }
+  .search-results {
+    position: absolute; top: 42px; right: 0; width: 340px; max-height: 60vh; overflow: auto;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 6px;
+    display: none; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  }
+  .search-results.show { display: block; }
+  .sr-item { padding: 9px 11px; border-radius: 9px; cursor: pointer; }
+  .sr-item:hover { background: var(--panel); }
+  .sr-item .t { font-weight: 700; font-size: 13.5px; }
+  .sr-item .d { color: var(--ink-dim); font-size: 12px; }
+
+  main { max-width: 1040px; margin: 0 auto; padding: 22px 18px 120px; }
+
+  /* ---------- Study (cards) ---------- */
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink-dim);
+    padding: 6px 13px; border-radius: 999px; font-size: 12.5px; cursor: pointer; font-weight: 600;
+  }
+  .chip.active { color: var(--ink); border-color: var(--accent); background: rgba(91,157,255,.12); }
+  .count { color: var(--ink-dim); font-size: 12.5px; margin-left: auto; }
+
+  .flash {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    min-height: 320px; padding: 26px 30px; position: relative; cursor: pointer;
+    display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  .flash .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--accent); font-weight: 700; }
+  .flash .face-label { position: absolute; top: 18px; right: 22px; font-size: 10.5px; color: var(--ink-dim); letter-spacing: .12em; text-transform: uppercase; }
+  .flash .term-q { font-size: 26px; font-weight: 800; margin: auto 0; text-align: center; }
+  .flash .ans { font-size: 15.5px; }
+  .flash .ans ul { margin: 6px 0 6px 18px; padding: 0; }
+  .flash .ans table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 6px 0; }
+  .flash .ans td, .flash .ans th { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+  .flash .hint { text-align: center; color: var(--ink-dim); font-size: 12.5px; margin-top: 14px; }
+  .nav-row { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 18px; }
+  .btn {
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #06122b; border-color: var(--accent); }
+
+  /* ---------- Explore (glossary grid) ---------- */
+  .gloss-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .gloss-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 15px; cursor: pointer;
+  }
+  .gloss-card:hover { border-color: var(--accent); transform: translateY(-2px); transition: .12s; }
+  .gloss-card .gt { font-weight: 700; font-size: 14.5px; margin-bottom: 4px; }
+  .gloss-card .gd { color: var(--ink-dim); font-size: 12.5px; }
+  .gloss-card .badge { display: inline-block; margin-top: 9px; font-size: 10.5px; color: var(--accent2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+  .group-title { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-dim); margin: 26px 0 10px; font-weight: 700; }
+
+  /* ---------- Test (quiz) ---------- */
+  .quiz-wrap { max-width: 720px; margin: 0 auto; }
+  .qcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 26px; }
+  .qmeta { color: var(--ink-dim); font-size: 12.5px; display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .qtext { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+  .choice {
+    display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--ink); padding: 13px 16px; border-radius: 11px; margin-bottom: 10px; cursor: pointer; font-size: 14.5px;
+  }
+  .choice:hover { border-color: var(--accent); }
+  .choice.correct { border-color: var(--good); background: rgba(70,211,154,.13); }
+  .choice.wrong { border-color: var(--bad); background: rgba(255,107,107,.12); }
+  .choice .mk { font-weight: 800; margin-right: 9px; color: var(--ink-dim); }
+  .explain { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 14px; font-size: 14px; display: none; }
+  .explain.show { display: block; }
+  .explain .why { color: var(--ink-dim); }
+  .scorebar { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; color: var(--ink-dim); font-size: 13px; }
+  .progress { height: 6px; background: var(--panel); border-radius: 999px; overflow: hidden; flex: 1; }
+  .progress > div { height: 100%; background: var(--accent); width: 0%; }
+
+  /* ---------- Term links ---------- */
+  .term {
+    color: var(--term); border-bottom: 1.5px dotted rgba(124,196,255,.6);
+    cursor: pointer; font-weight: 600;
+  }
+  .term:hover { background: rgba(124,196,255,.14); border-radius: 3px; }
+
+  /* ---------- Tooltip ---------- */
+  #tooltip {
+    position: fixed; z-index: 60; max-width: 320px; background: #0c0e13; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; font-size: 13px; line-height: 1.45;
+    box-shadow: 0 16px 44px rgba(0,0,0,.6); pointer-events: none; opacity: 0; transition: opacity .12s; display: none;
+  }
+  #tooltip .tt-term { font-weight: 800; color: var(--term); display: block; margin-bottom: 3px; font-size: 13px; }
+  #tooltip .tt-hint { color: var(--ink-dim); font-size: 11px; margin-top: 6px; font-style: italic; }
+
+  /* ---------- Drill drawer ---------- */
+  #scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 70; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  #scrim.show { opacity: 1; pointer-events: auto; }
+  #drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 94vw); z-index: 80;
+    background: var(--panel); border-left: 1px solid var(--line);
+    transform: translateX(102%); transition: transform .26s cubic-bezier(.2,.8,.2,1);
+    display: flex; flex-direction: column;
+  }
+  #drawer.show { transform: translateX(0); }
+  .drawer-head { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  .crumbs { font-size: 12px; color: var(--ink-dim); flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .crumbs .c { cursor: pointer; }
+  .crumbs .c:hover { color: var(--ink); }
+  .crumbs .sep { opacity: .5; margin: 0 5px; }
+  .icon-btn { border: 1px solid var(--line); background: var(--panel2); color: var(--ink); width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 16px; line-height: 1; }
+  .icon-btn:hover { border-color: var(--accent); }
+  .drawer-body { padding: 20px 22px 60px; overflow: auto; }
+  .drawer-body h2 { margin: 0 0 4px; font-size: 23px; }
+  .eli5 { color: var(--ink); background: rgba(91,157,255,.1); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 8px; font-size: 15px; margin: 12px 0 18px; }
+  .drawer-body p { margin: 0 0 12px; font-size: 14.5px; }
+  .drawer-body ul, .drawer-body ol { margin: 6px 0 14px 20px; padding: 0; font-size: 14.5px; }
+  .drawer-body li { margin-bottom: 5px; }
+  .drawer-body strong { color: #fff; }
+  .deeper { border: 1px solid var(--line); border-radius: 10px; margin: 14px 0; overflow: hidden; }
+  .deeper > summary { cursor: pointer; padding: 11px 14px; font-weight: 700; font-size: 13.5px; background: var(--panel2); color: var(--ink); list-style: none; }
+  .deeper > summary::-webkit-details-marker { display: none; }
+  .deeper > summary::before { content: "▸ "; color: var(--accent); }
+  .deeper[open] > summary::before { content: "▾ "; }
+  .deeper .deeper-in { padding: 12px 15px; }
+  .worked { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 12px 0; font-size: 13.5px; }
+  .worked .wt { font-weight: 700; color: var(--warn); margin-bottom: 6px; }
+  /* acronym expansion + equations + examples */
+  .expand-sub { color: var(--ink-dim); font-size: 13px; margin: -4px 0 10px; font-style: italic; }
+  .equation-block { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+  .equation-block .eq-math { overflow-x: auto; overflow-y: hidden; text-align: center; font-size: 15px; }
+  .eq-where { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .eq-where-h { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-dim); margin-bottom: 7px; }
+  .eq-where ul { margin: 0 0 0 2px; padding: 0; list-style: none; font-size: 13.5px; }
+  .eq-where li { margin: 0 0 6px 0; display: flex; gap: 8px; align-items: baseline; }
+  .eq-where .eq-sym { color: var(--term); min-width: 30px; flex-shrink: 0; }
+  .examples { margin: 20px 0 6px; }
+  .examples-h { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent2); font-weight: 700; margin-bottom: 11px; }
+  .example-card { background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--accent2); border-radius: 10px; padding: 13px 15px; margin-bottom: 12px; }
+  .ex-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .ex-scenario { font-size: 13.5px; margin-bottom: 8px; }
+  .ex-given { font-size: 12.5px; color: var(--ink-dim); margin-bottom: 6px; line-height: 1.8; }
+  .ex-steps { overflow-x: auto; overflow-y: hidden; font-size: 14px; margin: 4px 0; }
+  .ex-result { background: rgba(70,211,154,.12); border: 1px solid rgba(70,211,154,.4); border-radius: 8px; padding: 7px 11px; font-size: 14px; font-weight: 600; margin-top: 8px; }
+  .minichart { margin-top: 12px; }
+  .minichart .mc-title { font-size: 11.5px; color: var(--ink-dim); margin-bottom: 5px; }
+  .minichart svg { width: 100%; height: auto; display: block; }
+  .memory { background: rgba(139,124,255,.13); border-left: 3px solid var(--accent2); border-radius: 8px; padding: 8px 12px 8px 34px; font-size: 13px; margin: 0 0 14px; position: relative; }
+  .memory::before { content: "🧠"; position: absolute; left: 11px; top: 8px; }
+  .trap { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.4); border-radius: 10px; padding: 10px 13px; font-size: 13.5px; margin: 16px 0; }
+  .trap .trap-h { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--bad); font-weight: 700; margin-bottom: 4px; }
+  .trap .trap-h::before { content: "\26A0  "; }
+  .related { margin-top: 22px; }
+  .related .rt { font-size: 11.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-dim); margin-bottom: 8px; }
+  .rel-chip { display: inline-block; margin: 0 7px 7px 0; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 12.5px; cursor: pointer; color: var(--term); }
+  .rel-chip:hover { border-color: var(--accent); background: rgba(124,196,255,.1); }
+
+  /* ---------- Graphics ---------- */
+  .graphic { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 16px 0; }
+  .graphic .g-title { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+  .graphic .g-sub { color: var(--ink-dim); font-size: 12px; margin-bottom: 10px; }
+  .graphic svg { width: 100%; height: auto; display: block; touch-action: none; }
+  .readout { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .ro { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; }
+  .ro .k { font-size: 10.5px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .05em; }
+  .ro .v { font-size: 16px; font-weight: 800; }
+  .ctrls { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .ctrl { font-size: 12px; color: var(--ink-dim); display: flex; flex-direction: column; gap: 3px; min-width: 120px; }
+  .ctrl input[type=range] { width: 150px; }
+  .toggle-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .toggle-row button { font-size: 12px; padding: 5px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-dim); cursor: pointer; }
+  .toggle-row button.on { color: #06122b; background: var(--accent); border-color: var(--accent); }
+
+  .empty { color: var(--ink-dim); text-align: center; padding: 60px 0; }
+  kbd { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Engineering <span>Learning Lab</span></div>
+  <div class="tabs">
+    <button class="tab active" data-mode="study">Study</button>
+    <button class="tab" data-mode="explore">Explore</button>
+    <button class="tab" data-mode="test">Quiz</button>
+    <button class="tab" data-mode="exam">Exam</button>
+  </div>
+  <div class="search">
+    <input id="searchBox" type="text" placeholder="Search any concept…" autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<!-- Tooltip -->
+<div id="tooltip"></div>
+
+<!-- Drill drawer -->
+<div id="scrim"></div>
+<aside id="drawer">
+  <div class="drawer-head">
+    <button class="icon-btn" id="drawerBack" title="Back">‹</button>
+    <div class="crumbs" id="crumbs"></div>
+    <button class="icon-btn" id="drawerClose" title="Close">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>
+/* ============================================================================
+   DATA STORES  (filled in chunks)
+   ============================================================================ */
+const GLOSSARY = {};   // id -> { term, eli5, full, deeper?, worked?, related?, graphic?, aliases?, group? }
+const QUIZ = [];       // { q, choices:[...], answer:idx, explain (html), terms:[...] }
+const CARDS = [];      // { sec, front, back }  (reused from the printable deck)
+const SECTIONS = {};   // sec code -> display name
+
+/* ============================================================================
+   GRAPHICS REGISTRY  — dependency-free interactive SVG widgets
+   Each fn receives a mount element and builds its own UI + interactivity.
+   ============================================================================ */
+const GRAPHICS = {};
+
+/* ---- helper: format dollars ---- */
+function usd(n){ return '$' + Math.round(n).toLocaleString(); }
+function svgEl(tag, attrs){ const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+/* ============================================================================
+   SWE INTERACTIVE GRAPHICS  (sequence/boxes factories + concept widgets)
+   added during engine adaptation
+   ============================================================================ */
+
+/* ============================================================================
+   AUTO-LINKER  — wrap known glossary terms in clickable spans, safely
+   (walks text nodes only; never breaks HTML; links each term once per block)
+   ============================================================================ */
+let ALIAS = null;
+function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function buildAlias(){
+  const pairs = [];
+  for(const id in GLOSSARY){
+    const g = GLOSSARY[id];
+    const names = [g.term].concat(g.aliases||[]);
+    for(const n of names){ if(n && n.length>=3) pairs.push([n, id]); }
+  }
+  pairs.sort((a,b)=> b[0].length - a[0].length);
+  const map = {}; const toks = [];
+  for(const [alias,id] of pairs){
+    const key = alias.toLowerCase();
+    if(!(key in map)){ map[key]=id; toks.push(escapeRegex(alias)); }
+  }
+  let re;
+  try { re = new RegExp('(?<![\\w-])(' + toks.join('|') + ')(?![\\w-])', 'gi'); }
+  catch(e){ re = new RegExp('\\b(' + toks.join('|') + ')\\b', 'gi'); }
+  ALIAS = { re, map };
+}
+function autolink(root, opts){
+  if(!ALIAS) return;
+  opts = opts || {};
+  const skip = opts.skip || null;
+  const once = new Set(); if(skip) once.add(skip);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      if(!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      let p = node.parentNode;
+      while(p && p !== root){
+        const tag = p.nodeName;
+        if(tag==='A'||tag==='SCRIPT'||tag==='STYLE'||tag==='BUTTON'||tag==='SUMMARY') return NodeFilter.FILTER_REJECT;
+        if(tag==='SVG'||tag==='svg'||tag.indexOf('MJX')===0) return NodeFilter.FILTER_REJECT;  // never touch rendered math or graphics
+        if(p.classList && (p.classList.contains('term')||p.classList.contains('no-link'))) return NodeFilter.FILTER_REJECT;
+        p = p.parentNode;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+  const { re, map } = ALIAS;
+  for(const tn of nodes){
+    const text = tn.nodeValue; re.lastIndex = 0;
+    let m, last = 0, frag = null;
+    while((m = re.exec(text))){
+      const id = map[m[1].toLowerCase()];
+      if(!id) continue;
+      if(once.has(id)) continue;
+      once.add(id);
+      if(!frag) frag = document.createDocumentFragment();
+      frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const s = document.createElement('span'); s.className='term'; s.dataset.term=id; s.textContent=m[1];
+      frag.appendChild(s);
+      last = m.index + m[1].length;
+    }
+    if(frag){ frag.appendChild(document.createTextNode(text.slice(last))); tn.parentNode.replaceChild(frag, tn); }
+  }
+}
+/* typeset math first (so the linker can't corrupt LaTeX), THEN link terms */
+/* escape literal currency dollars (e.g., $10) so MathJax treats them as text,
+   not as inline-math delimiters. Only escapes "$" directly before a digit and
+   NOT part of a "$$" display-math opener. Runs before MathJax typesets. */
+function escapeCurrencyDollars(root){
+  let re; try{ re = /(?<!\$)\$(?=\d)/g; }catch(e){ re = /\$(?=\d)/g; }
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+  for(const n of nodes){ if(n.nodeValue.indexOf('$')>=0 && /\$\d/.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(re, '\\$'); }
+}
+function typesetThenLink(el, opts){
+  try{ escapeCurrencyDollars(el); }catch(e){}
+  const done = ()=>{ try{ autolink(el, opts||{}); }catch(e){} };
+  if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]).then(done).catch(done);
+  else done();
+}
+
+/* ============================================================================
+   DRILL DRAWER  — navigation stack + breadcrumbs
+   ============================================================================ */
+let stack = [];
+const drawer = document.getElementById('drawer');
+const scrim = document.getElementById('scrim');
+
+function openTerm(id, reset){
+  if(!GLOSSARY[id]){ return; }
+  if(reset) stack = [];
+  if(stack[stack.length-1] !== id) stack.push(id);
+  renderDrawer();
+  drawer.classList.add('show'); scrim.classList.add('show');
+  hideTooltip();
+}
+function drawerBack(){
+  stack.pop();
+  if(stack.length){ renderDrawer(); }
+  else closeDrawer();
+}
+function closeDrawer(){ drawer.classList.remove('show'); scrim.classList.remove('show'); stack=[]; }
+
+/* ---- rich-content renderers: equations (with per-variable glossary),
+        multi worked-examples, and a generic per-example MINICHART ---- */
+function renderEquation(eq){
+  let h='<div class="equation-block"><div class="eq-math">$$'+eq.latex+'$$</div>';
+  if(eq.where && eq.where.length){
+    h+='<div class="eq-where"><div class="eq-where-h">where each term means</div><ul>'
+      + eq.where.map(w=>'<li><span class="eq-sym no-link">$'+w.s+'$</span><span>'+w.d+'</span></li>').join('')
+      + '</ul></div>';
+  }
+  return h+'</div>';
+}
+function renderExamples(list){
+  let h='<div class="examples"><div class="examples-h">Worked Examples</div>';
+  list.forEach((ex,i)=>{
+    h+='<div class="example-card"><div class="ex-title no-link">'+(i+1)+'. '+ex.title+'</div>';
+    if(ex.scenario) h+='<div class="ex-scenario">'+ex.scenario+'</div>';
+    if(ex.given && ex.given.length) h+='<div class="ex-given no-link">'+ex.given.map(x=>'<span class="eq-sym">$'+x.s+'$</span> = '+x.d).join(' &nbsp;&middot;&nbsp; ')+'</div>';
+    if(ex.steps && ex.steps.length) h+='<div class="ex-steps no-link">'+ex.steps.map(s=>'$$'+s+'$$').join('')+'</div>';
+    if(ex.result) h+='<div class="ex-result">'+ex.result+'</div>';
+    if(ex.chart) h+='<div class="minichart" data-chart="'+encodeURIComponent(JSON.stringify(ex.chart))+'"></div>';
+    if(ex.graphicId && GRAPHICS[ex.graphicId]) h+='<div class="graphic" data-graphic="'+ex.graphicId+'"></div>';
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+function MINICHART(mount, spec){
+  spec=spec||{}; const W=480; const unit=spec.unit||'';
+  function fmt(v){ const r=Math.round(v*100)/100; if(unit==='$') return '$'+r.toLocaleString(); if(unit==='%') return r+'%'; return r+(unit?' '+unit:''); }
+  if(spec.title){ const t=document.createElement('div'); t.className='mc-title'; t.textContent=spec.title; mount.appendChild(t); }
+  if(spec.type==='bars'){
+    const data=spec.data||[]; const max=spec.max || (Math.max.apply(null,data.map(d=>Math.abs(d.value)))*1.18) || 1;
+    const rh=30, H=data.length*rh+8, x0=8, x1=W-160;
+    const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+    data.forEach((d,i)=>{ const y=i*rh+6; const w=Math.max(2,Math.abs(d.value)/max*(x1-x0)); const col=d.color||'#5b9dff';
+      svg.appendChild(svgEl('rect',{x:x0,y:y,width:w,height:18,rx:4,fill:col,opacity:.85}));
+      const lab=svgEl('text',{x:x0+w+8,y:y+13,fill:'#e7e9ee','font-size':12}); lab.textContent=d.label+'  '+fmt(d.value); svg.appendChild(lab); });
+    mount.appendChild(svg); return;
+  }
+  if(spec.type==='stack'){
+    const seg=spec.segments||[]; const tot=seg.reduce((s,x)=>s+Math.abs(x.value),0)||1;
+    const H=68, x0=8, x1=W-8; const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H}); let x=x0;
+    seg.forEach(s=>{ const w=Math.abs(s.value)/tot*(x1-x0); svg.appendChild(svgEl('rect',{x:x,y:18,width:Math.max(1,w),height:24,fill:s.color||'#5b9dff',opacity:.85}));
+      if(w>42){ const t=svgEl('text',{x:x+w/2,y:34,'text-anchor':'middle',fill:'#06122b','font-size':10,'font-weight':'700'}); t.textContent=fmt(s.value); svg.appendChild(t); }
+      if(w>30){ const lab=svgEl('text',{x:x+w/2,y:57,'text-anchor':'middle',fill:'#9aa3b2','font-size':9}); lab.textContent=s.label; svg.appendChild(lab); } x+=w; });
+    mount.appendChild(svg); return;
+  }
+  if(spec.type==='numberline'){
+    const min=spec.min, max=spec.max, H=64, padL=16,padR=16; const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+    const xOf=v=>padL+(W-padL-padR)*(v-min)/((max-min)||1);
+    svg.appendChild(svgEl('line',{x1:padL,y1:40,x2:W-padR,y2:40,stroke:'#2a2f3a','stroke-width':2}));
+    [min,max].forEach(v=>{ const t=svgEl('text',{x:xOf(v),y:56,'text-anchor':'middle',fill:'#9aa3b2','font-size':9}); t.textContent=fmt(v); svg.appendChild(t); });
+    (spec.marks||[]).forEach(m=>{ const x=xOf(m.value); svg.appendChild(svgEl('circle',{cx:x,cy:40,r:6,fill:m.color||'#5b9dff',stroke:'#fff','stroke-width':1.5}));
+      const t=svgEl('text',{x:x,y:24,'text-anchor':'middle',fill:m.color||'#e7e9ee','font-size':10}); t.textContent=m.label+' '+fmt(m.value); svg.appendChild(t); });
+    mount.appendChild(svg); return;
+  }
+  if(spec.type==='line'){
+    const pts=spec.points||[]; if(!pts.length) return; const H=160,padL=44,padR=12,padT=12,padB=22, plotW=W-padL-padR, plotH=H-padT-padB;
+    const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+    const xmin=Math.min.apply(null,xs), xmax=Math.max.apply(null,xs), ymin=Math.min(0,Math.min.apply(null,ys)), ymax=(Math.max.apply(null,ys)*1.1)||1;
+    const xOf=x=>padL+plotW*(x-xmin)/((xmax-xmin)||1), yOf=y=>padT+plotH*(1-(y-ymin)/((ymax-ymin)||1));
+    const svg=svgEl('svg',{viewBox:'0 0 '+W+' '+H});
+    svg.appendChild(svgEl('line',{x1:padL,y1:yOf(ymin),x2:W-padR,y2:yOf(ymin),stroke:'#2a2f3a'}));
+    const yl=svgEl('text',{x:padL-6,y:yOf(ymax)+4,'text-anchor':'end',fill:'#9aa3b2','font-size':9}); yl.textContent=fmt(ymax); svg.appendChild(yl);
+    let d=''; pts.forEach((p,i)=>{ d+=(i?'L':'M')+xOf(p[0])+' '+yOf(p[1])+' '; });
+    svg.appendChild(svgEl('path',{d,fill:'none',stroke:spec.color||'#5b9dff','stroke-width':2.4}));
+    (spec.marks||[]).forEach(m=>{ svg.appendChild(svgEl('circle',{cx:xOf(m[0]),cy:yOf(m[1]),r:4,fill:'#46d39a'})); });
+    if(spec.xlabel){ const t=svgEl('text',{x:W/2,y:H-2,'text-anchor':'middle',fill:'#9aa3b2','font-size':9}); t.textContent=spec.xlabel; svg.appendChild(t); }
+    mount.appendChild(svg); return;
+  }
+}
+
+function renderDrawer(){
+  const id = stack[stack.length-1];
+  const g = GLOSSARY[id];
+  // breadcrumbs
+  const cr = document.getElementById('crumbs');
+  cr.innerHTML = stack.map((sid,i)=>{
+    const name = GLOSSARY[sid] ? GLOSSARY[sid].term : sid;
+    return '<span class="c" data-i="'+i+'">'+name+'</span>' + (i<stack.length-1?'<span class="sep">›</span>':'');
+  }).join('');
+
+  let html = '<h2 class="no-link">'+g.term+'</h2>';
+  if(g.expand) html += '<div class="expand-sub no-link">'+g.expand+'</div>';
+  if(g.eli5) html += '<div class="eli5 no-link">'+g.eli5+'</div>';
+  if(g.memory) html += '<div class="memory">'+g.memory+'</div>';
+  if(g.equation) html += renderEquation(g.equation);
+  if(g.full) html += g.full;
+  if(g.graphic && GRAPHICS[g.graphic]) html += '<div class="graphic" data-graphic="'+g.graphic+'"></div>';
+  if(g.examples && g.examples.length) html += renderExamples(g.examples);
+  if(g.trap) html += '<div class="trap"><span class="trap-h">Gotcha</span>'+g.trap+'</div>';
+  if(g.worked) html += '<div class="worked"><div class="wt">Worked example</div>'+g.worked+'</div>';
+  if(g.deeper) html += '<details class="deeper"><summary>Go deeper</summary><div class="deeper-in">'+g.deeper+'</div></details>';
+  if(g.related && g.related.length){
+    html += '<div class="related"><div class="rt">Related concepts</div>'
+      + g.related.map(r=> GLOSSARY[r] ? '<span class="rel-chip" data-term="'+r+'">'+GLOSSARY[r].term+'</span>' : '').join('')
+      + '</div>';
+  }
+  const body = document.getElementById('drawerBody');
+  body.innerHTML = html;
+  body.scrollTop = 0;
+
+  // mount graphics
+  body.querySelectorAll('[data-graphic]').forEach(el=>{
+    const fn = GRAPHICS[el.dataset.graphic]; if(fn) fn(el);
+  });
+  // mount per-example mini-charts
+  body.querySelectorAll('[data-chart]').forEach(el=>{
+    try{ MINICHART(el, JSON.parse(decodeURIComponent(el.dataset.chart))); }catch(e){}
+  });
+  // typeset math first, then autolink everything except the current term
+  typesetThenLink(body, { skip:id });
+}
+
+document.getElementById('drawerBack').onclick = drawerBack;
+document.getElementById('drawerClose').onclick = closeDrawer;
+scrim.onclick = closeDrawer;
+document.getElementById('crumbs').addEventListener('click', e=>{
+  const c = e.target.closest('.c'); if(!c) return;
+  stack = stack.slice(0, +c.dataset.i + 1); renderDrawer();
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+/* ============================================================================
+   TOOLTIP (hover peek)
+   ============================================================================ */
+const tooltip = document.getElementById('tooltip');
+let ttTimer = null;
+function showTooltip(el){
+  const id = el.dataset.term; const g = GLOSSARY[id]; if(!g) return;
+  tooltip.innerHTML = '<span class="tt-term">'+g.term+'</span>'+(g.eli5||'')+'<div class="tt-hint">click to explore →</div>';
+  tooltip.style.display='block';
+  const r = el.getBoundingClientRect();
+  let top = r.bottom + 8, left = r.left;
+  tooltip.style.left = '-9999px'; tooltip.style.top='0';
+  requestAnimationFrame(()=>{
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    if(left + tw > window.innerWidth - 12) left = window.innerWidth - tw - 12;
+    if(top + th > window.innerHeight - 12) top = r.top - th - 8;
+    tooltip.style.left = Math.max(12,left)+'px'; tooltip.style.top = Math.max(12,top)+'px'; tooltip.style.opacity='1';
+  });
+}
+function hideTooltip(){ tooltip.style.opacity='0'; clearTimeout(ttTimer); setTimeout(()=>{ if(tooltip.style.opacity==='0') tooltip.style.display='none'; },150); }
+
+document.addEventListener('mouseover', e=>{
+  const t = e.target.closest('.term'); if(!t) return;
+  clearTimeout(ttTimer); ttTimer = setTimeout(()=>showTooltip(t), 280);
+});
+document.addEventListener('mouseout', e=>{
+  const t = e.target.closest('.term'); if(!t) return; hideTooltip();
+});
+/* click any term anywhere -> drill */
+document.addEventListener('click', e=>{
+  const t = e.target.closest('.term, .rel-chip'); if(!t) return;
+  const id = t.dataset.term; if(id) openTerm(id);
+});
+
+/* ============================================================================
+   MODES
+   ============================================================================ */
+let mode = 'study';
+let studyIndex = 0;
+let studyFilter = 'ALL';
+let studyShowBack = false;
+
+function setMode(m){
+  mode = m;
+  if(m!=='exam') clearInterval(examTimer);
+  document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.mode===m));
+  render();
+}
+document.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> setMode(t.dataset.mode));
+
+function render(){
+  const v = document.getElementById('view');
+  if(mode==='study') renderStudy(v);
+  else if(mode==='explore') renderExplore(v);
+  else if(mode==='test') renderTest(v);
+  else renderExam(v);
+}
+
+/* ---------- STUDY ---------- */
+function studyDeck(){ return studyFilter==='ALL' ? CARDS : CARDS.filter(c=>c.sec===studyFilter); }
+function renderStudy(v){
+  const deck = studyDeck();
+  if(studyIndex>=deck.length) studyIndex=0;
+  const secs = Array.from(new Set(CARDS.map(c=>c.sec)));
+  let chips = '<div class="chip '+(studyFilter==='ALL'?'active':'')+'" data-f="ALL">All ('+CARDS.length+')</div>';
+  chips += secs.map(s=>'<div class="chip '+(studyFilter===s?'active':'')+'" data-f="'+s+'">'+(SECTIONS[s]||s)+'</div>').join('');
+
+  const c = deck[studyIndex];
+  let cardHtml;
+  if(!c){ cardHtml = '<div class="empty">No cards in this filter.</div>'; }
+  else {
+    cardHtml =
+      '<div class="flash" id="flash">'
+      + '<div class="face-label">'+(studyShowBack?'Answer':'Term')+'</div>'
+      + '<div class="sec">'+(SECTIONS[c.sec]||c.sec)+'</div>'
+      + (studyShowBack
+          ? '<div class="ans">'+c.back+'</div>'
+          : '<div class="term-q">'+c.front+'</div>')
+      + '<div class="hint">'+(studyShowBack?'Tap card for term · click any underlined word to learn it':'Tap card to flip')+'</div>'
+      + '</div>';
+  }
+
+  v.innerHTML =
+    '<div class="toolbar">'+chips+'<span class="count" id="scount"></span></div>'
+    + cardHtml
+    + '<div class="nav-row">'
+    + '<button class="btn" id="prev">‹ Prev</button>'
+    + '<button class="btn primary" id="flip">Flip</button>'
+    + '<button class="btn" id="next">Next ›</button>'
+    + '</div>';
+
+  document.getElementById('scount').textContent = deck.length ? (studyIndex+1)+' / '+deck.length : '';
+  v.querySelectorAll('.chip').forEach(ch=> ch.onclick=()=>{ studyFilter=ch.dataset.f; studyIndex=0; studyShowBack=false; renderStudy(v); });
+  const flashEl = document.getElementById('flash');
+  if(flashEl){
+    flashEl.onclick = (e)=>{ if(e.target.closest('.term')) return; studyShowBack=!studyShowBack; renderStudy(v); };
+    if(studyShowBack){ typesetThenLink(flashEl.querySelector('.ans'), {}); }
+    else if(window.MathJax&&MathJax.typesetPromise){ MathJax.typesetPromise([flashEl]).catch(()=>{}); }
+  }
+  document.getElementById('flip').onclick = ()=>{ studyShowBack=!studyShowBack; renderStudy(v); };
+  document.getElementById('prev').onclick = ()=>{ studyIndex=(studyIndex-1+deck.length)%deck.length; studyShowBack=false; renderStudy(v); };
+  document.getElementById('next').onclick = ()=>{ studyIndex=(studyIndex+1)%deck.length; studyShowBack=false; renderStudy(v); };
+}
+
+/* ---------- EXPLORE ---------- */
+function renderExplore(v){
+  const ids = Object.keys(GLOSSARY);
+  if(!ids.length){ v.innerHTML = '<div class="empty">Glossary loading…</div>'; return; }
+  // group
+  const groups = {};
+  ids.forEach(id=>{ const g=GLOSSARY[id]; const grp=g.group||'General'; (groups[grp]=groups[grp]||[]).push(id); });
+  let html = '<p style="color:var(--ink-dim);font-size:13.5px;margin-top:0">Click any concept to open it. Inside, every underlined word drills deeper — keep going until it makes sense. <b>'+ids.length+'</b> concepts and counting.</p>';
+  Object.keys(groups).sort().forEach(grp=>{
+    html += '<div class="group-title">'+grp+'</div><div class="gloss-grid">';
+    groups[grp].sort((a,b)=>GLOSSARY[a].term.localeCompare(GLOSSARY[b].term)).forEach(id=>{
+      const g=GLOSSARY[id];
+      html += '<div class="gloss-card" data-term="'+id+'"><div class="gt">'+g.term+'</div><div class="gd">'+(g.eli5||'').replace(/<[^>]+>/g,'')+'</div>'
+        + (g.graphic?'<span class="badge">interactive ▸</span>':'')+'</div>';
+    });
+    html += '</div>';
+  });
+  v.innerHTML = html;
+  v.querySelectorAll('.gloss-card').forEach(card=> card.onclick=()=> openTerm(card.dataset.term, true));
+}
+
+/* ---------- TEST ---------- */
+let quizOrder = [], quizPos = 0, quizScore = 0, quizAnswered = false;
+function startQuiz(){
+  quizOrder = QUIZ.map((_,i)=>i);
+  // light shuffle (deterministic-free ok here)
+  for(let i=quizOrder.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [quizOrder[i],quizOrder[j]]=[quizOrder[j],quizOrder[i]]; }
+  quizPos=0; quizScore=0; quizAnswered=false;
+}
+function renderTest(v){
+  if(!QUIZ.length){ v.innerHTML='<div class="empty">Question bank loading…</div>'; return; }
+  if(!quizOrder.length) startQuiz();
+  if(quizPos>=quizOrder.length){
+    v.innerHTML = '<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+      + '<div class="qtext">Quiz complete</div>'
+      + '<div style="font-size:42px;font-weight:800;color:var(--accent)">'+quizScore+' / '+quizOrder.length+'</div>'
+      + '<p style="color:var(--ink-dim)">'+Math.round(quizScore/quizOrder.length*100)+'% — review any concept in Explore, then go again.</p>'
+      + '<button class="btn primary" id="again">Restart</button></div></div>';
+    document.getElementById('again').onclick=()=>{ startQuiz(); renderTest(v); };
+    return;
+  }
+  const q = QUIZ[quizOrder[quizPos]];
+  quizAnswered=false;
+  v.innerHTML = '<div class="quiz-wrap">'
+    + '<div class="scorebar"><span>Q'+(quizPos+1)+' / '+quizOrder.length+'</span><div class="progress"><div style="width:'+(quizPos/quizOrder.length*100)+'%"></div></div><span>Score '+quizScore+'</span></div>'
+    + '<div class="qcard">'
+    + '<div class="qmeta"><span>'+(SECTIONS[q.sec]||q.sec||'Series 65')+'</span></div>'
+    + '<div class="qtext">'+q.q+'</div>'
+    + '<div id="choices">'+ q.choices.map((ch,i)=>'<button class="choice" data-i="'+i+'"><span class="mk">'+String.fromCharCode(65+i)+'</span>'+ch+'</button>').join('') +'</div>'
+    + '<div class="explain" id="explain"></div>'
+    + '<div class="nav-row" style="justify-content:flex-end;margin-top:16px"><button class="btn primary" id="qnext" style="display:none">Next ›</button></div>'
+    + '</div></div>';
+
+  const choicesEl = v.querySelector('#choices');
+  const explainEl = v.querySelector('#explain');
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
+  choicesEl.querySelectorAll('.choice').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(quizAnswered) return; quizAnswered=true;
+      const pick = +btn.dataset.i;
+      const correct = q.answer;
+      choicesEl.querySelectorAll('.choice').forEach((b,i)=>{
+        if(i===correct) b.classList.add('correct');
+        else if(i===pick) b.classList.add('wrong');
+        b.style.pointerEvents='none';
+      });
+      if(pick===correct) quizScore++;
+      explainEl.innerHTML = '<div class="why">'+(pick===correct?'<b style="color:var(--good)">Correct.</b> ':'<b style="color:var(--bad)">Not quite.</b> ')+q.explain+'</div>';
+      explainEl.classList.add('show');
+      typesetThenLink(explainEl, {});
+      const nx=v.querySelector('#qnext'); nx.style.display='inline-block';
+      nx.onclick=()=>{ quizPos++; renderTest(v); };
+    };
+  });
+}
+
+/* ============================================================================
+   EXAM SIMULATOR  — section-weighted, timed, auto-generated from all cards
+   ============================================================================ */
+const NASAA_AREAS = {
+  "Economic Factors (15%)": { weight:0.15, secs:["ECON","IND","TVM","TECH"] },
+  "Investment Vehicles (25%)": { weight:0.25, secs:["MM","FI","EQ","POOL","INS","DERIV","ALT"] },
+  "Strategies (30%)": { weight:0.30, secs:["SUIT","RISK","RAR","MPT","STRAT","TAX","RET","EDU","ACCT","PERF"] },
+  "Laws & Ethics (30%)": { weight:0.30, secs:["IAA","USA","FED","AML","REGBI","ETH"] }
+};
+function secArea(sec){ for(const a in NASAA_AREAS){ if(NASAA_AREAS[a].secs.indexOf(sec)>=0) return a; } return null; }
+function stripHtml(h){ const d=document.createElement('div'); d.innerHTML=h; return (d.textContent||'').replace(/\s+/g,' ').trim(); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function firstSentence(txt){ const m=txt.match(/^.*?[.:](\s|$)/); let s=m?m[0]:txt; if(s.length<45) s=txt.slice(0,170); return s.trim(); }
+
+function buildExam(n){
+  const eligible = CARDS.filter(c=> secArea(c.sec));
+  const byArea = {}; for(const a in NASAA_AREAS) byArea[a]=[];
+  eligible.forEach(c=> byArea[secArea(c.sec)].push(c));
+  const areas = Object.keys(NASAA_AREAS);
+  let counts = areas.map(a=> Math.round(n*NASAA_AREAS[a].weight));
+  counts[0] += n - counts.reduce((x,y)=>x+y,0);   // absorb rounding
+  const qs=[];
+  areas.forEach((a,idx)=>{
+    const pool = shuffle(byArea[a]); const need = counts[idx];
+    for(let k=0; k<need && k<pool.length; k++){
+      const card = pool[k];
+      const correct = card.front;
+      const distract = shuffle(pool.filter(c=>c.front!==correct)).slice(0,3).map(c=>c.front);
+      const choices = shuffle([correct].concat(distract));
+      let sent = firstSentence(stripHtml(card.back));
+      try { const r = new RegExp(stripHtml(correct).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'); sent = sent.replace(r,'_____'); } catch(e){}
+      qs.push({ stem:'Which concept best matches this description?  “'+sent+'”', choices, answer:choices.indexOf(correct), area:a, sec:card.sec, back:card.back, front:correct });
+    }
+  });
+  return shuffle(qs);
+}
+
+let examState=null, examTimer=null;
+function renderExam(v){
+  if(!examState){
+    v.innerHTML = '<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+      + '<div class="qtext">Exam Simulator</div>'
+      + '<p style="color:var(--ink-dim)">Questions are sampled across the decks. Pass mark is 75%. Miss anything and you can drill into it afterward.</p>'
+      + '<div class="toggle-row" style="justify-content:center" id="lenpick">'
+      + '<button data-n="20">Quick · 20</button><button data-n="60" class="on">Standard · 60</button><button data-n="130">Full · 130</button>'
+      + '</div>'
+      + '<label style="display:block;margin:14px 0;color:var(--ink-dim);font-size:13px"><input type="checkbox" id="timed" checked> Timed (≈78 sec/question)</label>'
+      + '<button class="btn primary" id="startExam">Begin</button>'
+      + '</div></div>';
+    let len=60;
+    v.querySelectorAll('#lenpick button').forEach(b=> b.onclick=()=>{ v.querySelectorAll('#lenpick button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); len=+b.dataset.n; });
+    v.querySelector('#startExam').onclick=()=>{
+      const timed=v.querySelector('#timed').checked;
+      examState={ qs:buildExam(len), pos:0, answers:[], timed, remaining:Math.round(len*78) };
+      renderExam(v);
+    };
+    return;
+  }
+  if(examState.pos>=examState.qs.length){ return renderExamResults(v); }
+  const q=examState.qs[examState.pos];
+  v.innerHTML = '<div class="quiz-wrap">'
+    + '<div class="scorebar"><span>Q'+(examState.pos+1)+' / '+examState.qs.length+'</span><div class="progress"><div style="width:'+(examState.pos/examState.qs.length*100)+'%"></div></div><span id="examClock"></span></div>'
+    + '<div class="qcard"><div class="qmeta"><span>'+q.area+'</span></div>'
+    + '<div class="qtext">'+q.stem+'</div>'
+    + '<div id="choices">'+q.choices.map((c,i)=>'<button class="choice" data-i="'+i+'"><span class="mk">'+String.fromCharCode(65+i)+'</span>'+c+'</button>').join('')+'</div>'
+    + '<div class="nav-row" style="justify-content:space-between;margin-top:16px"><button class="btn" id="examSkip">Skip</button><button class="btn primary" id="examNext" disabled>Next ›</button></div>'
+    + '</div></div>';
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
+  let chosen=null;
+  v.querySelectorAll('.choice').forEach(b=> b.onclick=()=>{
+    chosen=+b.dataset.i;
+    v.querySelectorAll('.choice').forEach(x=> x.classList.remove('correct','wrong'));
+    b.style.borderColor='var(--accent)';
+    v.querySelector('#examNext').disabled=false;
+  });
+  v.querySelector('#examNext').onclick=()=>{ examState.answers[examState.pos]=chosen; examState.pos++; renderExam(v); };
+  v.querySelector('#examSkip').onclick=()=>{ examState.answers[examState.pos]=(chosen==null?null:chosen); examState.pos++; renderExam(v); };
+  startExamClock(v);
+}
+function startExamClock(v){
+  clearInterval(examTimer);
+  if(!examState.timed){ const c=document.getElementById('examClock'); if(c) c.textContent='untimed'; return; }
+  function tick(){
+    if(!examState || mode!=='exam'){ clearInterval(examTimer); return; }
+    const mm=Math.floor(examState.remaining/60), ss=examState.remaining%60;
+    const el=document.getElementById('examClock');
+    if(el){ el.textContent='⏱ '+mm+':'+String(ss).padStart(2,'0'); el.style.color = examState.remaining<60?'var(--bad)':'var(--ink-dim)'; }
+    if(examState.remaining<=0){ clearInterval(examTimer); examState.pos=examState.qs.length; renderExam(v); return; }
+    examState.remaining--;
+  }
+  tick(); examTimer=setInterval(tick,1000);
+}
+function renderExamResults(v){
+  clearInterval(examTimer);
+  const qs=examState.qs, ans=examState.answers;
+  let correct=0; const tally={};
+  qs.forEach((q,i)=>{ const ok=ans[i]===q.answer; if(ok)correct++; (tally[q.area]=tally[q.area]||{c:0,t:0}); tally[q.area].t++; if(ok)tally[q.area].c++; });
+  const pct=Math.round(correct/qs.length*100), pass=pct>=72;
+  let html='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+    + '<div class="qtext">'+(pass?'<span style="color:var(--good)">PASS</span>':'<span style="color:var(--bad)">Below pass mark</span>')+'</div>'
+    + '<div style="font-size:46px;font-weight:800;color:'+(pass?'var(--good)':'var(--bad)')+'">'+pct+'%</div>'
+    + '<p style="color:var(--ink-dim)">'+correct+' / '+qs.length+' correct · pass mark 72%</p>'
+    + '<div class="readout" style="text-align:left">';
+  Object.keys(tally).forEach(a=>{ const t=tally[a]; html+='<div class="ro"><div class="k">'+a+'</div><div class="v">'+t.c+'/'+t.t+' · '+Math.round(t.c/t.t*100)+'%</div></div>'; });
+  html += '</div><div class="nav-row"><button class="btn" id="examReview">Review misses</button><button class="btn primary" id="examAgain">New exam</button></div>'
+    + '</div><div id="reviewArea"></div></div>';
+  v.innerHTML=html;
+  v.querySelector('#examAgain').onclick=()=>{ examState=null; renderExam(v); };
+  v.querySelector('#examReview').onclick=()=>{
+    const misses=qs.map((q,i)=>({q,i})).filter(x=> ans[x.i]!==x.q.answer);
+    const ra=document.getElementById('reviewArea');
+    if(!misses.length){ ra.innerHTML='<div class="empty">Perfect score — nothing to review.</div>'; return; }
+    ra.innerHTML = misses.map(x=>{
+      const q=x.q, your = (x.i in ans && ans[x.i]!=null) ? q.choices[ans[x.i]] : '(skipped)';
+      return '<div class="qcard" style="margin-top:12px"><div class="qmeta"><span>'+q.area+'</span></div>'
+        + '<div style="font-size:14.5px;margin-bottom:8px">'+q.stem+'</div>'
+        + '<div style="font-size:13px;color:var(--bad)">You: '+your+'</div>'
+        + '<div style="font-size:13px;color:var(--good);margin-bottom:8px">Correct: '+q.front+'</div>'
+        + '<div class="explain show"><div class="why">'+q.back+'</div></div></div>';
+    }).join('');
+    typesetThenLink(ra,{});
+    ra.scrollIntoView({behavior:'smooth'});
+  };
+}
+
+/* ============================================================================
+   SEARCH
+   ============================================================================ */
+const searchBox = document.getElementById('searchBox');
+const searchResults = document.getElementById('searchResults');
+searchBox.addEventListener('input', ()=>{
+  const q = searchBox.value.trim().toLowerCase();
+  if(!q){ searchResults.classList.remove('show'); return; }
+  const hits = [];
+  for(const id in GLOSSARY){
+    const g = GLOSSARY[id];
+    const hay = (g.term+' '+(g.aliases||[]).join(' ')+' '+(g.eli5||'')).toLowerCase();
+    if(hay.includes(q)) hits.push(id);
+    if(hits.length>=12) break;
+  }
+  if(!hits.length){ searchResults.innerHTML='<div class="sr-item"><div class="d">No concept found. Try Study or Test.</div></div>'; }
+  else searchResults.innerHTML = hits.map(id=>'<div class="sr-item" data-term="'+id+'"><div class="t">'+GLOSSARY[id].term+'</div><div class="d">'+(GLOSSARY[id].eli5||'').replace(/<[^>]+>/g,'').slice(0,70)+'…</div></div>').join('');
+  searchResults.classList.add('show');
+  searchResults.querySelectorAll('.sr-item[data-term]').forEach(it=> it.onclick=()=>{ openTerm(it.dataset.term, true); searchResults.classList.remove('show'); searchBox.value=''; });
+});
+document.addEventListener('click', e=>{ if(!e.target.closest('.search')) searchResults.classList.remove('show'); });
+
+/* ============================================================================
+   BOOT
+   ============================================================================ */
+function boot(){
+  Object.assign(SECTIONS, SECTIONS_DATA);
+  CARDS.push(...CARDS_DATA);
+  Object.assign(GLOSSARY, GLOSSARY_DATA);
+  // merge enhancement layer (equations, multi-examples, acronym expansions) into existing concepts
+  if(typeof ENHANCE !== 'undefined'){ for(const id in ENHANCE){ if(GLOSSARY[id]) Object.assign(GLOSSARY[id], ENHANCE[id]); else GLOSSARY[id]=ENHANCE[id]; } }
+  QUIZ.push(...QUIZ_DATA);
+  buildAlias();
+  render();
+}
+</script>
+
+<!-- ============================================================================
+     DATA PAYLOAD  — content modules are injected by build.js at the marker below
+     ============================================================================ -->
+<script>
+const SECTIONS_DATA = {};   // topicCode -> display name
+const DECKS_DATA = [];      // [{id,name,topics:[topicCode,...]}] for two-level nav
+const CARDS_DATA = [];
+const GLOSSARY_DATA = {};
+const ENHANCE = {};
+function enh(o){ for(const k in o){ ENHANCE[k]=Object.assign(ENHANCE[k]||{}, o[k]); } }
+const QUIZ_DATA = [];
+</script>
+
+
+<!-- content: 00-demo.js -->
+<script>
+/* ============================================================================
+   VERTICAL SLICE — Reliable messaging cluster (sourced from NexusPay)
+   Proves the forked engine renders SWE content: cards, drill-down glossary,
+   memory hooks, Gotchas, worked examples, cross-links.
+   ============================================================================ */
+SECTIONS_DATA["STREAM"] = "Distributed Systems & Streaming";
+SECTIONS_DATA["ARCH"]   = "Software Architecture & Design";
+
+CARDS_DATA.push(
+  { sec:"ARCH", front:"The dual-write problem",
+    back:"A service that must <strong>update its database AND publish an event</strong> as two separate writes can crash in between — committing one without the other. The result: a lost event or a ghost event, and permanent divergence between your data and your stream. The transactional outbox solves it." },
+  { sec:"ARCH", front:"Transactional outbox pattern",
+    back:"Write the event row into an <strong>outbox table in the SAME database transaction</strong> as the business change. Either both commit or neither does. A separate relay (often change data capture) then publishes the outbox rows to Kafka. One atomic write — no dual-write inconsistency." },
+  { sec:"STREAM", front:"Why 'exactly-once' is usually 'effectively-once'",
+    back:"True exactly-once <em>delivery</em> over a network is impossible (you can't distinguish a lost ack from a lost message). What systems actually deliver is <strong>at-least-once delivery + idempotent processing</strong>, which yields exactly-once <em>effects</em>. Kafka's 'exactly-once' is transactions + idempotent producer, still leaning on dedup downstream." },
+  { sec:"STREAM", front:"Idempotent consumer",
+    back:"A consumer you can safely feed the <strong>same message twice</strong> with no extra effect — e.g., dedup by an idempotency key in a fast store (Valkey/Redis), or an upsert keyed by event id. Mandatory under at-least-once delivery, because duplicates <em>will</em> happen." },
+  { sec:"STREAM", front:"Dead-letter queue (DLQ)",
+    back:"A side channel where messages that <strong>repeatedly fail</strong> processing are parked after N retries, so one poison-pill message can't block the partition for everyone behind it. You alert on DLQ depth and replay after a fix." },
+  { sec:"STREAM", front:"Change data capture (CDC)",
+    back:"Stream every row change by <strong>tailing the database's commit log</strong> (e.g., Debezium reading the Postgres WAL) instead of polling. It's how the outbox relay publishes events durably and in commit order, without the service doing a second write." }
+);
+
+Object.assign(GLOSSARY_DATA, {
+"dual-write-problem":{ term:"The Dual-Write Problem", group:"Software Architecture & Design",
+  aliases:["dual-write problem","dual write","dual-write"],
+  eli5:"Updating your database AND publishing an event as two separate steps risks doing one but not the other if the process crashes in between — leaving data and stream out of sync.",
+  full:"<p>Many services must do two things on one action: persist a state change and tell the rest of the system about it. If those are <b>two independent writes</b> (DB commit, then Kafka send), a crash or network blip between them corrupts the system of record:</p><ul><li>DB commits, publish fails &rarr; a <b>lost event</b> (downstream never learns).</li><li>Publish succeeds, DB rolls back &rarr; a <b>ghost event</b> (downstream acts on a change that never happened).</li></ul><p>There is no ordering of two separate writes that is safe. The fix is to make them <b>one</b> atomic write — the transactional outbox.</p>",
+  related:["transactional-outbox","change-data-capture","idempotency","exactly-once"] },
+
+"transactional-outbox":{ term:"Transactional Outbox", group:"Software Architecture & Design",
+  aliases:["transactional outbox","outbox pattern","outbox"],
+  eli5:"Write the event into an 'outbox' table inside the same transaction as your business change, so they commit together; a separate relay publishes it afterward. One atomic write, zero lost events.",
+  full:"<p>The <b>transactional outbox</b> turns the dual-write problem into a single-write problem. In one local DB transaction you write both the business row and an <code>outbox</code> row describing the event. Because they share a transaction, they commit or roll back together — atomicity guarantees you never have one without the other.</p><p>A separate <b>relay</b> then moves outbox rows to the message broker. Two common relays: poll-and-publish (a worker selects unsent rows) or, better, <b>change data capture</b> tailing the commit log. The relay marks rows sent (or CDC tracks its offset), and consumers dedupe by event id for idempotency.</p>",
+  related:["dual-write-problem","change-data-capture","idempotency","dead-letter-queue","exactly-once"] },
+
+"idempotency":{ term:"Idempotency", group:"Distributed Systems & Streaming",
+  aliases:["idempotency","idempotent","idempotent consumer","idempotency key"],
+  eli5:"An operation is idempotent if doing it twice has the same effect as doing it once. Essential because at-least-once delivery guarantees you'll sometimes get duplicates.",
+  full:"<p><b>Idempotency</b> lets you safely retry. Formally, <code>f(f(x)) = f(x)</code> — applying the operation again changes nothing. In messaging this is the only sane defense against duplicates, which are inevitable under <b>at-least-once</b> delivery.</p><p>Practical techniques: dedupe on a unique <b>idempotency key</b> (request id / event id) recorded in a fast store; use database <b>upserts</b> keyed by a natural id; or design operations to be naturally idempotent (set balance to X, not add X).</p>",
+  related:["exactly-once","dead-letter-queue","transactional-outbox"] },
+
+"exactly-once":{ term:"Exactly-Once Semantics", group:"Distributed Systems & Streaming",
+  aliases:["exactly-once","exactly once","effectively-once","delivery semantics"],
+  eli5:"The appearance that each message is processed exactly once. In practice it's at-least-once delivery plus idempotent processing ('effectively-once') — true once-only delivery is impossible over a network.",
+  full:"<p>The three delivery guarantees: <b>at-most-once</b> (fire and forget; may lose), <b>at-least-once</b> (retry until acked; may duplicate), and <b>exactly-once</b> (the holy grail). Because a sender can't tell a lost message from a lost acknowledgment, exactly-once <i>delivery</i> is unachievable — but exactly-once <i>effects</i> are, via at-least-once delivery + an idempotent consumer.</p><p>Kafka's 'exactly-once' combines the idempotent producer (dedupe by producer id + sequence) with transactions spanning consume-process-produce; downstream sinks still typically dedupe.</p>",
+  related:["idempotency","transactional-outbox","dead-letter-queue"] },
+
+"dead-letter-queue":{ term:"Dead-Letter Queue (DLQ)", group:"Distributed Systems & Streaming",
+  aliases:["dead-letter queue","dead letter queue","DLQ","poison pill"],
+  eli5:"A side channel where messages that keep failing get parked after a few retries, so one bad ('poison') message doesn't block everything queued behind it.",
+  full:"<p>A <b>dead-letter queue</b> is where messages go to be quarantined after exceeding a retry budget. Without it, a single un-processable <b>poison pill</b> (malformed payload, an unhandled schema change) stalls the partition and grows consumer lag for everyone behind it.</p><p>Operational pattern: retry with backoff a bounded number of times; on exhaustion, route to the DLQ with failure metadata; alert on DLQ depth; fix the bug or data; then replay. Entropy Engine specifically chaos-tests this with injected poison pills.</p>",
+  related:["idempotency","transactional-outbox","exactly-once"] },
+
+"change-data-capture":{ term:"Change Data Capture (CDC)", group:"Distributed Systems & Streaming",
+  aliases:["change data capture","CDC","Debezium","write-ahead log"],
+  eli5:"Stream every change to a database by reading its commit log (the write-ahead log) instead of polling — capturing inserts, updates, and deletes in commit order as events.",
+  full:"<p><b>CDC</b> reads the database's <b>write-ahead log</b> (WAL/binlog) and emits each committed change as an event. Tools like <b>Debezium</b> do this for Postgres/MySQL. Because it reads the log the DB already writes for durability, it adds no second write and preserves commit order.</p><p>It's the durable engine behind the transactional outbox relay: the service only writes the outbox row; Debezium tails the WAL and publishes it to Kafka — turning the database's own log into the source of truth for the stream.</p>",
+  related:["transactional-outbox","dual-write-problem"] }
+});
+
+enh({
+"dual-write-problem":{
+  memory:"Two separate writes can't be made atomic &mdash; a crash between them corrupts your system of record.",
+  trap:"There is NO safe ordering of DB-then-publish or publish-then-DB. Retries don't fix it (the crash happens before the retry). Only a single atomic write does." },
+"transactional-outbox":{
+  memory:"One DB transaction writes both the business row AND the event; a relay publishes the outbox later.",
+  trap:"The outbox alone doesn't give exactly-once &mdash; the relay delivers at-least-once, so consumers STILL must dedupe by event id (idempotency).",
+  examples:[{ title:"Why the crash is now harmless", scenario:"A payment service writes the payment row and an OutboxEvent row in one transaction, then crashes before the relay runs.",
+    result:"On restart the relay finds the un-published outbox row and sends it &mdash; <b>nothing is lost</b>, because the event was committed atomically with the payment. Compare the dual-write version, where the event would be gone forever." }] },
+"idempotency":{
+  memory:"f(f(x)) = f(x): safe to repeat. Required because at-least-once delivery WILL duplicate.",
+  trap:"&lsquo;Insert a row&rsquo; is NOT idempotent (second try violates a key or double-inserts). &lsquo;Upsert by event id&rsquo; or &lsquo;dedupe on an idempotency key&rsquo; is." },
+"exactly-once":{
+  memory:"Exactly-once = at-least-once delivery + idempotent processing (&lsquo;effectively-once&rsquo;).",
+  trap:"True exactly-once DELIVERY is impossible &mdash; a sender can't distinguish a lost message from a lost ack. Anyone promising it is really doing at-least-once + dedup." },
+"dead-letter-queue":{
+  memory:"Park repeatedly-failing messages aside so one poison pill can't block the partition.",
+  trap:"Don't retry a poison pill forever in place &mdash; it grows consumer lag for everyone behind it. Bound retries, then DLQ + alert + replay." },
+"change-data-capture":{
+  memory:"Tail the commit log (WAL) instead of polling &mdash; every change, in order, no second write.",
+  trap:"CDC captures what COMMITTED, in commit order &mdash; not application intent. Schema changes to the source table flow straight through, so pair it with schema-drift handling." }
+});
+
+</script>
+
+
+<script>boot();</script>
+</body>
+</html>
