@@ -83,6 +83,16 @@ window.MathJax = {
     padding: 6px 13px; border-radius: 999px; font-size: 12.5px; cursor: pointer; font-weight: 600;
   }
   .chip.active { color: var(--ink); border-color: var(--accent); background: rgba(91,157,255,.12); }
+  .chip .ct { opacity:.6; font-weight:500; font-size:11px; margin-left:2px; }
+  .deck-chip { --dc: var(--accent); }
+  .deck-chip.active { border-color: var(--dc); background: color-mix(in srgb, var(--dc) 14%, transparent); color: var(--ink); }
+  .deck-chip.active::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--dc); margin-right:6px; vertical-align:middle; }
+  .topic-row { margin-top:-6px; padding-left:2px; }
+  .topic-row .chip { font-size:12px; padding:5px 11px; }
+  .deck-section { margin-top: 22px; }
+  .deck-h { font-size: 15px; font-weight: 800; color: var(--ink); padding: 6px 0 4px 12px; border-left: 3px solid var(--dc); margin-bottom: 8px; }
+  .topic-h { font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-dim); margin: 14px 0 8px 2px; font-weight: 700; }
+  .sr-deck { font-size: 10px; color: var(--ink-dim); font-weight: 500; background: var(--panel); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-left:6px; }
   .count { color: var(--ink-dim); font-size: 12.5px; margin-left: auto; }
 
   .flash {
@@ -314,7 +324,10 @@ window.MathJax = {
 const GLOSSARY = {};   // id -> { term, eli5, full, deeper?, worked?, related?, graphic?, aliases?, group? }
 const QUIZ = [];       // { q, choices:[...], answer:idx, explain (html), terms:[...] }
 const CARDS = [];      // { sec, front, back }  (reused from the printable deck)
-const SECTIONS = {};   // sec code -> display name
+const SECTIONS = {};   // topic code -> display name
+const DECKS = [];      // [{id,name,color,topics:[topicCode...]}]
+const TOPIC2DECK = {}; // topic code -> deck object
+let _searchIdx = null; // [{id,hay}] built at boot
 
 /* ============================================================================
    GRAPHICS REGISTRY  — dependency-free interactive SVG widgets
@@ -748,7 +761,8 @@ document.addEventListener('click', e=>{
    ============================================================================ */
 let mode = 'study';
 let studyIndex = 0;
-let studyFilter = 'ALL';
+let studyFilter = 'ALL';     // topic code or 'ALL'
+let studyDeckSel = 'ALL';    // deck id or 'ALL'
 let studyShowBack = false;
 
 function setMode(m){
@@ -769,13 +783,25 @@ function render(){
 }
 
 /* ---------- STUDY ---------- */
-function studyDeck(){ return studyFilter==='ALL' ? CARDS : CARDS.filter(c=>c.sec===studyFilter); }
+function studyCards(){
+  let cs = CARDS;
+  if(studyDeckSel!=='ALL'){ const d=DECKS.find(x=>x.id===studyDeckSel); const ts=new Set(d?d.topics:[]); cs=cs.filter(c=>ts.has(c.sec)); }
+  if(studyFilter!=='ALL') cs=cs.filter(c=>c.sec===studyFilter);
+  return cs;
+}
 function renderStudy(v){
-  const deck = studyDeck();
+  const deck = studyCards();
   if(studyIndex>=deck.length) studyIndex=0;
-  const secs = Array.from(new Set(CARDS.map(c=>c.sec)));
-  let chips = '<div class="chip '+(studyFilter==='ALL'?'active':'')+'" data-f="ALL">All ('+CARDS.length+')</div>';
-  chips += secs.map(s=>'<div class="chip '+(studyFilter===s?'active':'')+'" data-f="'+s+'">'+(SECTIONS[s]||s)+'</div>').join('');
+  const cardSecs = new Set(CARDS.map(c=>c.sec));
+  const decksWithCards = DECKS.filter(d=>(d.topics||[]).some(t=>cardSecs.has(t)));
+  let chips = '<div class="chip deck-chip '+(studyDeckSel==='ALL'?'active':'')+'" data-deck="ALL">All decks <span class="ct">'+CARDS.length+'</span></div>'
+    + decksWithCards.map(d=>{ const n=CARDS.filter(c=>(d.topics||[]).indexOf(c.sec)>=0).length; return '<div class="chip deck-chip '+(studyDeckSel===d.id?'active':'')+'" data-deck="'+d.id+'" style="--dc:'+(d.color||'#5b9dff')+'">'+d.name+' <span class="ct">'+n+'</span></div>'; }).join('');
+  let topicChips='';
+  if(studyDeckSel!=='ALL'){
+    const d=DECKS.find(x=>x.id===studyDeckSel), tws=(d?d.topics:[]).filter(t=>cardSecs.has(t));
+    topicChips='<div class="toolbar topic-row"><div class="chip '+(studyFilter==='ALL'?'active':'')+'" data-f="ALL">All topics</div>'
+      + tws.map(t=>'<div class="chip '+(studyFilter===t?'active':'')+'" data-f="'+t+'">'+(SECTIONS[t]||t)+' <span class="ct">'+CARDS.filter(c=>c.sec===t).length+'</span></div>').join('')+'</div>';
+  }
 
   const c = deck[studyIndex];
   let cardHtml;
@@ -793,7 +819,7 @@ function renderStudy(v){
   }
 
   v.innerHTML =
-    '<div class="toolbar">'+chips+'<span class="count" id="scount"></span></div>'
+    '<div class="toolbar deck-row">'+chips+'<span class="count" id="scount"></span></div>'+topicChips
     + cardHtml
     + '<div class="nav-row">'
     + '<button class="btn" id="prev">‹ Prev</button>'
@@ -802,7 +828,8 @@ function renderStudy(v){
     + '</div>';
 
   document.getElementById('scount').textContent = deck.length ? (studyIndex+1)+' / '+deck.length : '';
-  v.querySelectorAll('.chip').forEach(ch=> ch.onclick=()=>{ studyFilter=ch.dataset.f; studyIndex=0; studyShowBack=false; renderStudy(v); });
+  v.querySelectorAll('.deck-chip').forEach(ch=> ch.onclick=()=>{ studyDeckSel=ch.dataset.deck; studyFilter='ALL'; studyIndex=0; studyShowBack=false; renderStudy(v); });
+  v.querySelectorAll('.topic-row .chip').forEach(ch=> ch.onclick=()=>{ studyFilter=ch.dataset.f; studyIndex=0; studyShowBack=false; renderStudy(v); });
   const flashEl = document.getElementById('flash');
   if(flashEl){
     flashEl.onclick = (e)=>{ if(e.target.closest('.term')) return; studyShowBack=!studyShowBack; renderStudy(v); };
@@ -818,18 +845,22 @@ function renderStudy(v){
 function renderExplore(v){
   const ids = Object.keys(GLOSSARY);
   if(!ids.length){ v.innerHTML = '<div class="empty">Glossary loading…</div>'; return; }
-  // group
-  const groups = {};
-  ids.forEach(id=>{ const g=GLOSSARY[id]; const grp=g.group||'General'; (groups[grp]=groups[grp]||[]).push(id); });
-  let html = '<p style="color:var(--ink-dim);font-size:13.5px;margin-top:0">Click any concept to open it. Inside, every underlined word drills deeper — keep going until it makes sense. <b>'+ids.length+'</b> concepts and counting.</p>';
-  Object.keys(groups).sort().forEach(grp=>{
-    html += '<div class="group-title">'+grp+'</div><div class="gloss-grid">';
-    groups[grp].sort((a,b)=>GLOSSARY[a].term.localeCompare(GLOSSARY[b].term)).forEach(id=>{
-      const g=GLOSSARY[id];
-      html += '<div class="gloss-card" data-term="'+id+'"><div class="gt">'+g.term+'</div><div class="gd">'+(g.eli5||'').replace(/<[^>]+>/g,'')+'</div>'
-        + (g.graphic?'<span class="badge">interactive ▸</span>':'')+'</div>';
+  // group by deck -> topic
+  const OTHER={id:'__other', name:'Other', color:'#6a7385'};
+  const byDeck={};
+  ids.forEach(id=>{ const g=GLOSSARY[id]; const topic=g.group||'__none'; const deck=TOPIC2DECK[topic]||OTHER;
+    const db=byDeck[deck.id]||(byDeck[deck.id]={deck, topics:{}}); (db.topics[topic]=db.topics[topic]||[]).push(id); });
+  const order=DECKS.map(d=>d.id).concat(['__other']);
+  let html = '<p style="color:var(--ink-dim);font-size:13.5px;margin-top:0">Click any concept to open it. Inside, every underlined word drills deeper. <b>'+ids.length+'</b> concepts across <b>'+Object.keys(byDeck).length+'</b> decks.</p>';
+  order.forEach(did=>{ const db=byDeck[did]; if(!db) return; const dc=db.deck.color||'#5b9dff';
+    html+='<div class="deck-section"><div class="deck-h" style="--dc:'+dc+'">'+db.deck.name+'</div>';
+    Object.keys(db.topics).sort((a,b)=>(SECTIONS[a]||a).localeCompare(SECTIONS[b]||b)).forEach(topic=>{
+      html+='<div class="topic-h">'+(SECTIONS[topic]||(topic==='__none'?'General':topic))+'</div><div class="gloss-grid">';
+      db.topics[topic].sort((a,b)=>GLOSSARY[a].term.localeCompare(GLOSSARY[b].term)).forEach(id=>{ const g=GLOSSARY[id];
+        html+='<div class="gloss-card" data-term="'+id+'"><div class="gt">'+g.term+'</div><div class="gd">'+(g.eli5||'').replace(/<[^>]+>/g,'')+'</div>'+(g.graphic?'<span class="badge">interactive ▸</span>':'')+'</div>'; });
+      html+='</div>';
     });
-    html += '</div>';
+    html+='</div>';
   });
   v.innerHTML = html;
   v.querySelectorAll('.gloss-card').forEach(card=> card.onclick=()=> openTerm(card.dataset.term, true));
@@ -1020,21 +1051,18 @@ function renderExamResults(v){
    ============================================================================ */
 const searchBox = document.getElementById('searchBox');
 const searchResults = document.getElementById('searchResults');
-searchBox.addEventListener('input', ()=>{
+let _searchT=null;
+searchBox.addEventListener('input', ()=>{ clearTimeout(_searchT); _searchT=setTimeout(runSearch, 130); });
+function runSearch(){
   const q = searchBox.value.trim().toLowerCase();
   if(!q){ searchResults.classList.remove('show'); return; }
-  const hits = [];
-  for(const id in GLOSSARY){
-    const g = GLOSSARY[id];
-    const hay = (g.term+' '+(g.aliases||[]).join(' ')+' '+(g.eli5||'')).toLowerCase();
-    if(hay.includes(q)) hits.push(id);
-    if(hits.length>=12) break;
-  }
-  if(!hits.length){ searchResults.innerHTML='<div class="sr-item"><div class="d">No concept found. Try Study or Test.</div></div>'; }
-  else searchResults.innerHTML = hits.map(id=>'<div class="sr-item" data-term="'+id+'"><div class="t">'+GLOSSARY[id].term+'</div><div class="d">'+(GLOSSARY[id].eli5||'').replace(/<[^>]+>/g,'').slice(0,70)+'…</div></div>').join('');
+  if(!_searchIdx) buildSearchIndex();
+  const hits=[]; for(const e of _searchIdx){ if(e.hay.indexOf(q)>=0){ hits.push(e.id); if(hits.length>=14) break; } }
+  if(!hits.length){ searchResults.innerHTML='<div class="sr-item"><div class="d">No concept found.</div></div>'; }
+  else searchResults.innerHTML = hits.map(id=>{ const g=GLOSSARY[id], d=TOPIC2DECK[g.group]; return '<div class="sr-item" data-term="'+id+'"><div class="t">'+g.term+(d?' <span class="sr-deck">'+d.name+'</span>':'')+'</div><div class="d">'+(g.eli5||'').replace(/<[^>]+>/g,'').slice(0,70)+'…</div></div>'; }).join('');
   searchResults.classList.add('show');
   searchResults.querySelectorAll('.sr-item[data-term]').forEach(it=> it.onclick=()=>{ openTerm(it.dataset.term, true); searchResults.classList.remove('show'); searchBox.value=''; });
-});
+}
 document.addEventListener('click', e=>{ if(!e.target.closest('.search')) searchResults.classList.remove('show'); });
 
 /* ============================================================================
@@ -1124,10 +1152,14 @@ function boot(){
   // merge enhancement layer (equations, multi-examples, acronym expansions) into existing concepts
   if(typeof ENHANCE !== 'undefined'){ for(const id in ENHANCE){ if(GLOSSARY[id]) Object.assign(GLOSSARY[id], ENHANCE[id]); else GLOSSARY[id]=ENHANCE[id]; } }
   QUIZ.push(...QUIZ_DATA);
+  if(typeof DECKS_DATA!=='undefined') DECKS.push(...DECKS_DATA);
+  DECKS.forEach(d=>{ (d.topics||[]).forEach(t=>{ TOPIC2DECK[t]=d; }); });
   buildAlias();
+  buildSearchIndex();
   updateDueBadge();
   render();
 }
+function buildSearchIndex(){ _searchIdx = Object.keys(GLOSSARY).map(id=>{ const g=GLOSSARY[id]; return {id, hay:(g.term+' '+(g.aliases||[]).join(' ')+' '+(g.eli5||'')).toLowerCase()}; }); }
 </script>
 
 <!-- ============================================================================
@@ -1144,6 +1176,39 @@ const QUIZ_DATA = [];
 </script>
 
 
+<!-- content: 00-decks.js -->
+<script>
+/* ============================================================================
+   DECK & TOPIC SKELETON
+   DECKS_DATA: the 12 top-level decks, each owning a set of topic codes.
+   SECTIONS_DATA: topic code -> display name. Cards/glossary tag by topic code.
+   Content waves add topic codes here and tag their cards with them.
+   ============================================================================ */
+DECKS_DATA.push(
+  { id:"foundations", name:"Foundations — CS & System Design",      color:"#7c98c8", topics:[] },
+  { id:"streaming",   name:"Distributed Systems & Streaming",        color:"#5fb0a8", topics:["MSG","DELIV"] },
+  { id:"architecture",name:"Software Architecture & Design",          color:"#8b7cff", topics:["EDA"] },
+  { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:[] },
+  { id:"jvm",         name:"Java & the JVM",                          color:"#e07a5c", topics:[] },
+  { id:"spark",       name:"Big Data Processing — Apache Spark",      color:"#f0a866", topics:[] },
+  { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:[] },
+  { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:[] },
+  { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION"] },
+  { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:[] },
+  { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:[] },
+  { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:[] }
+);
+
+/* topic codes -> display names (demo slice) */
+Object.assign(SECTIONS_DATA, {
+  "EDA":       "Event-Driven Architecture",
+  "MSG":       "Reliable Messaging",
+  "DELIV":     "Delivery Semantics",
+  "MEDALLION": "Medallion Architecture"
+});
+
+</script>
+
 <!-- content: 00-demo.js -->
 <script>
 /* ============================================================================
@@ -1151,56 +1216,54 @@ const QUIZ_DATA = [];
    Proves the forked engine renders SWE content: cards, drill-down glossary,
    memory hooks, Gotchas, worked examples, cross-links.
    ============================================================================ */
-SECTIONS_DATA["STREAM"] = "Distributed Systems & Streaming";
-SECTIONS_DATA["ARCH"]   = "Software Architecture & Design";
-
+/* topics + decks are defined in 00-decks.js */
 CARDS_DATA.push(
-  { sec:"ARCH", front:"The dual-write problem",
+  { sec:"EDA", front:"The dual-write problem",
     back:"A service that must <strong>update its database AND publish an event</strong> as two separate writes can crash in between — committing one without the other. The result: a lost event or a ghost event, and permanent divergence between your data and your stream. The transactional outbox solves it." },
-  { sec:"ARCH", front:"Transactional outbox pattern",
+  { sec:"EDA", front:"Transactional outbox pattern",
     back:"Write the event row into an <strong>outbox table in the SAME database transaction</strong> as the business change. Either both commit or neither does. A separate relay (often change data capture) then publishes the outbox rows to Kafka. One atomic write — no dual-write inconsistency." },
-  { sec:"STREAM", front:"Why 'exactly-once' is usually 'effectively-once'",
+  { sec:"DELIV", front:"Why 'exactly-once' is usually 'effectively-once'",
     back:"True exactly-once <em>delivery</em> over a network is impossible (you can't distinguish a lost ack from a lost message). What systems actually deliver is <strong>at-least-once delivery + idempotent processing</strong>, which yields exactly-once <em>effects</em>. Kafka's 'exactly-once' is transactions + idempotent producer, still leaning on dedup downstream." },
-  { sec:"STREAM", front:"Idempotent consumer",
+  { sec:"MSG", front:"Idempotent consumer",
     back:"A consumer you can safely feed the <strong>same message twice</strong> with no extra effect — e.g., dedup by an idempotency key in a fast store (Valkey/Redis), or an upsert keyed by event id. Mandatory under at-least-once delivery, because duplicates <em>will</em> happen." },
-  { sec:"STREAM", front:"Dead-letter queue (DLQ)",
+  { sec:"MSG", front:"Dead-letter queue (DLQ)",
     back:"A side channel where messages that <strong>repeatedly fail</strong> processing are parked after N retries, so one poison-pill message can't block the partition for everyone behind it. You alert on DLQ depth and replay after a fix." },
-  { sec:"STREAM", front:"Change data capture (CDC)",
+  { sec:"MSG", front:"Change data capture (CDC)",
     back:"Stream every row change by <strong>tailing the database's commit log</strong> (e.g., Debezium reading the Postgres WAL) instead of polling. It's how the outbox relay publishes events durably and in commit order, without the service doing a second write." }
 );
 
 Object.assign(GLOSSARY_DATA, {
-"dual-write-problem":{ term:"The Dual-Write Problem", group:"Software Architecture & Design",
+"dual-write-problem":{ term:"The Dual-Write Problem", group:"EDA",
   aliases:["dual-write problem","dual write","dual-write"],
   eli5:"Updating your database AND publishing an event as two separate steps risks doing one but not the other if the process crashes in between — leaving data and stream out of sync.",
   full:"<p>Many services must do two things on one action: persist a state change and tell the rest of the system about it. If those are <b>two independent writes</b> (DB commit, then Kafka send), a crash or network blip between them corrupts the system of record:</p><ul><li>DB commits, publish fails &rarr; a <b>lost event</b> (downstream never learns).</li><li>Publish succeeds, DB rolls back &rarr; a <b>ghost event</b> (downstream acts on a change that never happened).</li></ul><p>There is no ordering of two separate writes that is safe. The fix is to make them <b>one</b> atomic write — the transactional outbox.</p>",
   related:["transactional-outbox","change-data-capture","idempotency","exactly-once"] },
 
-"transactional-outbox":{ term:"Transactional Outbox", group:"Software Architecture & Design",
+"transactional-outbox":{ term:"Transactional Outbox", group:"EDA",
   aliases:["transactional outbox","outbox pattern","outbox"],
   eli5:"Write the event into an 'outbox' table inside the same transaction as your business change, so they commit together; a separate relay publishes it afterward. One atomic write, zero lost events.",
   full:"<p>The <b>transactional outbox</b> turns the dual-write problem into a single-write problem. In one local DB transaction you write both the business row and an <code>outbox</code> row describing the event. Because they share a transaction, they commit or roll back together — atomicity guarantees you never have one without the other.</p><p>A separate <b>relay</b> then moves outbox rows to the message broker. Two common relays: poll-and-publish (a worker selects unsent rows) or, better, <b>change data capture</b> tailing the commit log. The relay marks rows sent (or CDC tracks its offset), and consumers dedupe by event id for idempotency.</p>",
   related:["dual-write-problem","change-data-capture","idempotency","dead-letter-queue","exactly-once"] },
 
-"idempotency":{ term:"Idempotency", group:"Distributed Systems & Streaming",
+"idempotency":{ term:"Idempotency", group:"MSG",
   aliases:["idempotency","idempotent","idempotent consumer","idempotency key"],
   eli5:"An operation is idempotent if doing it twice has the same effect as doing it once. Essential because at-least-once delivery guarantees you'll sometimes get duplicates.",
   full:"<p><b>Idempotency</b> lets you safely retry. Formally, <code>f(f(x)) = f(x)</code> — applying the operation again changes nothing. In messaging this is the only sane defense against duplicates, which are inevitable under <b>at-least-once</b> delivery.</p><p>Practical techniques: dedupe on a unique <b>idempotency key</b> (request id / event id) recorded in a fast store; use database <b>upserts</b> keyed by a natural id; or design operations to be naturally idempotent (set balance to X, not add X).</p>",
   related:["exactly-once","dead-letter-queue","transactional-outbox"] },
 
-"exactly-once":{ term:"Exactly-Once Semantics", group:"Distributed Systems & Streaming",
+"exactly-once":{ term:"Exactly-Once Semantics", group:"DELIV",
   aliases:["exactly-once","exactly once","effectively-once","delivery semantics"],
   eli5:"The appearance that each message is processed exactly once. In practice it's at-least-once delivery plus idempotent processing ('effectively-once') — true once-only delivery is impossible over a network.",
   full:"<p>The three delivery guarantees: <b>at-most-once</b> (fire and forget; may lose), <b>at-least-once</b> (retry until acked; may duplicate), and <b>exactly-once</b> (the holy grail). Because a sender can't tell a lost message from a lost acknowledgment, exactly-once <i>delivery</i> is unachievable — but exactly-once <i>effects</i> are, via at-least-once delivery + an idempotent consumer.</p><p>Kafka's 'exactly-once' combines the idempotent producer (dedupe by producer id + sequence) with transactions spanning consume-process-produce; downstream sinks still typically dedupe.</p>",
   related:["idempotency","transactional-outbox","dead-letter-queue"] },
 
-"dead-letter-queue":{ term:"Dead-Letter Queue (DLQ)", group:"Distributed Systems & Streaming",
+"dead-letter-queue":{ term:"Dead-Letter Queue (DLQ)", group:"MSG",
   aliases:["dead-letter queue","dead letter queue","DLQ","poison pill"],
   eli5:"A side channel where messages that keep failing get parked after a few retries, so one bad ('poison') message doesn't block everything queued behind it.",
   full:"<p>A <b>dead-letter queue</b> is where messages go to be quarantined after exceeding a retry budget. Without it, a single un-processable <b>poison pill</b> (malformed payload, an unhandled schema change) stalls the partition and grows consumer lag for everyone behind it.</p><p>Operational pattern: retry with backoff a bounded number of times; on exhaustion, route to the DLQ with failure metadata; alert on DLQ depth; fix the bug or data; then replay. Entropy Engine specifically chaos-tests this with injected poison pills.</p>",
   related:["idempotency","transactional-outbox","exactly-once"] },
 
-"change-data-capture":{ term:"Change Data Capture (CDC)", group:"Distributed Systems & Streaming",
+"change-data-capture":{ term:"Change Data Capture (CDC)", group:"MSG",
   aliases:["change data capture","CDC","Debezium","write-ahead log"],
   eli5:"Stream every change to a database by reading its commit log (the write-ahead log) instead of polling — capturing inserts, updates, and deletes in commit order as events.",
   full:"<p><b>CDC</b> reads the database's <b>write-ahead log</b> (WAL/binlog) and emits each committed change as an event. Tools like <b>Debezium</b> do this for Postgres/MySQL. Because it reads the log the DB already writes for durability, it adds no second write and preserves commit order.</p><p>It's the durable engine behind the transactional outbox relay: the service only writes the outbox row; Debezium tails the WAL and publishes it to Kafka — turning the database's own log into the source of truth for the stream.</p>",
@@ -1236,7 +1299,7 @@ enh({
 <script>
 /* Demo: code blocks, comparison tables, console output — exercises the new engine. */
 CARDS_DATA.push(
-  { sec:"ARCH", front:"Transactional outbox — the atomic write (Java)",
+  { sec:"EDA", front:"Transactional outbox — the atomic write (Java)",
     back:"The business row and the event row are saved in the <strong>same</strong> <code>@Transactional</code> method, so they commit together:" +
       CODE("java", `
 @Transactional
@@ -1248,7 +1311,7 @@ public Payment create(CreatePaymentCommand cmd) {
 }`) +
       "<p>A relay then publishes the unsent rows. Note: <em>outbox</em> appears in the code above but isn't linked — the auto-linker skips code.</p>" },
 
-  { sec:"STREAM", front:"Outbox relay query (SQL) — claim unsent events",
+  { sec:"MSG", front:"Outbox relay query (SQL) — claim unsent events",
     back:"A poll-based relay locks a batch without blocking other workers. The <code>$1</code> bind parameter must survive untouched (no MathJax/$ mangling):" +
       CODE("sql", `
 SELECT id, aggregate_id, payload
@@ -1258,7 +1321,7 @@ ORDER BY created_at
 LIMIT $1
 FOR UPDATE SKIP LOCKED;`) },
 
-  { sec:"STREAM", front:"Delivery semantics, compared",
+  { sec:"DELIV", front:"Delivery semantics, compared",
     back:"The three guarantees — and why 'exactly-once effects' wins for money:" +
       TABLE({
         headers:["Guarantee","Duplicates?","Loss?","Mechanism","Use it for"],
@@ -1270,7 +1333,7 @@ FOR UPDATE SKIP LOCKED;`) },
         highlight:[2]
       }) },
 
-  { sec:"STREAM", front:"Reading consumer lag",
+  { sec:"MSG", front:"Reading consumer lag",
     back:"Lag = how far a consumer group trails the log end. Watch it to detect a stalled or poison-pilled consumer:" +
       CONSOLE({ prompt:"$", cmd:"kafka-consumer-groups --describe --group payments",
         out:"TOPIC      PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG\npayments   0          18432           18432            0\npayments   1          9981            14002         4021   <-- stalled" }) }
@@ -1282,7 +1345,7 @@ FOR UPDATE SKIP LOCKED;`) },
 <script>
 /* Demo: diagram factories — SEQUENCE (UML) + BOXES (architecture). */
 CARDS_DATA.push(
-  { sec:"ARCH", front:"Transactional outbox — end-to-end flow",
+  { sec:"EDA", front:"Transactional outbox — end-to-end flow",
     back:"How a crash anywhere stays safe: the write is atomic, and CDC replays the outbox if the relay hasn't run yet." +
       SEQUENCE({
         title:"Outbox + CDC delivery",
@@ -1304,7 +1367,7 @@ CARDS_DATA.push(
         ]
       }) },
 
-  { sec:"STREAM", front:"The streaming lakehouse (medallion)",
+  { sec:"MEDALLION", front:"The streaming lakehouse (medallion)",
     back:"Data flows source &rarr; Kafka &rarr; Spark into the Bronze/Silver/Gold medallion layers, out to the warehouse; malformed records peel off to a DLQ." +
       BOXES({
         nodes:[

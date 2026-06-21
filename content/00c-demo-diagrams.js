@@ -1,6 +1,6 @@
 /* Demo: diagram factories — SEQUENCE (UML) + BOXES (architecture). */
 CARDS_DATA.push(
-  { sec:"ARCH", front:"Transactional outbox — end-to-end flow",
+  { sec:"EDA", front:"Transactional outbox — end-to-end flow",
     back:"How a crash anywhere stays safe: the write is atomic, and CDC replays the outbox if the relay hasn't run yet." +
       SEQUENCE({
         title:"Outbox + CDC delivery",
@@ -22,7 +22,7 @@ CARDS_DATA.push(
         ]
       }) },
 
-  { sec:"STREAM", front:"The streaming lakehouse (medallion)",
+  { sec:"MEDALLION", front:"The streaming lakehouse (medallion)",
     back:"Data flows source &rarr; Kafka &rarr; Spark into the Bronze/Silver/Gold medallion layers, out to the warehouse; malformed records peel off to a DLQ." +
       BOXES({
         nodes:[

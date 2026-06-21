@@ -83,6 +83,16 @@ window.MathJax = {
     padding: 6px 13px; border-radius: 999px; font-size: 12.5px; cursor: pointer; font-weight: 600;
   }
   .chip.active { color: var(--ink); border-color: var(--accent); background: rgba(91,157,255,.12); }
+  .chip .ct { opacity:.6; font-weight:500; font-size:11px; margin-left:2px; }
+  .deck-chip { --dc: var(--accent); }
+  .deck-chip.active { border-color: var(--dc); background: color-mix(in srgb, var(--dc) 14%, transparent); color: var(--ink); }
+  .deck-chip.active::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--dc); margin-right:6px; vertical-align:middle; }
+  .topic-row { margin-top:-6px; padding-left:2px; }
+  .topic-row .chip { font-size:12px; padding:5px 11px; }
+  .deck-section { margin-top: 22px; }
+  .deck-h { font-size: 15px; font-weight: 800; color: var(--ink); padding: 6px 0 4px 12px; border-left: 3px solid var(--dc); margin-bottom: 8px; }
+  .topic-h { font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-dim); margin: 14px 0 8px 2px; font-weight: 700; }
+  .sr-deck { font-size: 10px; color: var(--ink-dim); font-weight: 500; background: var(--panel); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-left:6px; }
   .count { color: var(--ink-dim); font-size: 12.5px; margin-left: auto; }
 
   .flash {
@@ -314,7 +324,10 @@ window.MathJax = {
 const GLOSSARY = {};   // id -> { term, eli5, full, deeper?, worked?, related?, graphic?, aliases?, group? }
 const QUIZ = [];       // { q, choices:[...], answer:idx, explain (html), terms:[...] }
 const CARDS = [];      // { sec, front, back }  (reused from the printable deck)
-const SECTIONS = {};   // sec code -> display name
+const SECTIONS = {};   // topic code -> display name
+const DECKS = [];      // [{id,name,color,topics:[topicCode...]}]
+const TOPIC2DECK = {}; // topic code -> deck object
+let _searchIdx = null; // [{id,hay}] built at boot
 
 /* ============================================================================
    GRAPHICS REGISTRY  — dependency-free interactive SVG widgets
@@ -748,7 +761,8 @@ document.addEventListener('click', e=>{
    ============================================================================ */
 let mode = 'study';
 let studyIndex = 0;
-let studyFilter = 'ALL';
+let studyFilter = 'ALL';     // topic code or 'ALL'
+let studyDeckSel = 'ALL';    // deck id or 'ALL'
 let studyShowBack = false;
 
 function setMode(m){
@@ -769,13 +783,25 @@ function render(){
 }
 
 /* ---------- STUDY ---------- */
-function studyDeck(){ return studyFilter==='ALL' ? CARDS : CARDS.filter(c=>c.sec===studyFilter); }
+function studyCards(){
+  let cs = CARDS;
+  if(studyDeckSel!=='ALL'){ const d=DECKS.find(x=>x.id===studyDeckSel); const ts=new Set(d?d.topics:[]); cs=cs.filter(c=>ts.has(c.sec)); }
+  if(studyFilter!=='ALL') cs=cs.filter(c=>c.sec===studyFilter);
+  return cs;
+}
 function renderStudy(v){
-  const deck = studyDeck();
+  const deck = studyCards();
   if(studyIndex>=deck.length) studyIndex=0;
-  const secs = Array.from(new Set(CARDS.map(c=>c.sec)));
-  let chips = '<div class="chip '+(studyFilter==='ALL'?'active':'')+'" data-f="ALL">All ('+CARDS.length+')</div>';
-  chips += secs.map(s=>'<div class="chip '+(studyFilter===s?'active':'')+'" data-f="'+s+'">'+(SECTIONS[s]||s)+'</div>').join('');
+  const cardSecs = new Set(CARDS.map(c=>c.sec));
+  const decksWithCards = DECKS.filter(d=>(d.topics||[]).some(t=>cardSecs.has(t)));
+  let chips = '<div class="chip deck-chip '+(studyDeckSel==='ALL'?'active':'')+'" data-deck="ALL">All decks <span class="ct">'+CARDS.length+'</span></div>'
+    + decksWithCards.map(d=>{ const n=CARDS.filter(c=>(d.topics||[]).indexOf(c.sec)>=0).length; return '<div class="chip deck-chip '+(studyDeckSel===d.id?'active':'')+'" data-deck="'+d.id+'" style="--dc:'+(d.color||'#5b9dff')+'">'+d.name+' <span class="ct">'+n+'</span></div>'; }).join('');
+  let topicChips='';
+  if(studyDeckSel!=='ALL'){
+    const d=DECKS.find(x=>x.id===studyDeckSel), tws=(d?d.topics:[]).filter(t=>cardSecs.has(t));
+    topicChips='<div class="toolbar topic-row"><div class="chip '+(studyFilter==='ALL'?'active':'')+'" data-f="ALL">All topics</div>'
+      + tws.map(t=>'<div class="chip '+(studyFilter===t?'active':'')+'" data-f="'+t+'">'+(SECTIONS[t]||t)+' <span class="ct">'+CARDS.filter(c=>c.sec===t).length+'</span></div>').join('')+'</div>';
+  }
 
   const c = deck[studyIndex];
   let cardHtml;
@@ -793,7 +819,7 @@ function renderStudy(v){
   }
 
   v.innerHTML =
-    '<div class="toolbar">'+chips+'<span class="count" id="scount"></span></div>'
+    '<div class="toolbar deck-row">'+chips+'<span class="count" id="scount"></span></div>'+topicChips
     + cardHtml
     + '<div class="nav-row">'
     + '<button class="btn" id="prev">‹ Prev</button>'
@@ -802,7 +828,8 @@ function renderStudy(v){
     + '</div>';
 
   document.getElementById('scount').textContent = deck.length ? (studyIndex+1)+' / '+deck.length : '';
-  v.querySelectorAll('.chip').forEach(ch=> ch.onclick=()=>{ studyFilter=ch.dataset.f; studyIndex=0; studyShowBack=false; renderStudy(v); });
+  v.querySelectorAll('.deck-chip').forEach(ch=> ch.onclick=()=>{ studyDeckSel=ch.dataset.deck; studyFilter='ALL'; studyIndex=0; studyShowBack=false; renderStudy(v); });
+  v.querySelectorAll('.topic-row .chip').forEach(ch=> ch.onclick=()=>{ studyFilter=ch.dataset.f; studyIndex=0; studyShowBack=false; renderStudy(v); });
   const flashEl = document.getElementById('flash');
   if(flashEl){
     flashEl.onclick = (e)=>{ if(e.target.closest('.term')) return; studyShowBack=!studyShowBack; renderStudy(v); };
@@ -818,18 +845,22 @@ function renderStudy(v){
 function renderExplore(v){
   const ids = Object.keys(GLOSSARY);
   if(!ids.length){ v.innerHTML = '<div class="empty">Glossary loading…</div>'; return; }
-  // group
-  const groups = {};
-  ids.forEach(id=>{ const g=GLOSSARY[id]; const grp=g.group||'General'; (groups[grp]=groups[grp]||[]).push(id); });
-  let html = '<p style="color:var(--ink-dim);font-size:13.5px;margin-top:0">Click any concept to open it. Inside, every underlined word drills deeper — keep going until it makes sense. <b>'+ids.length+'</b> concepts and counting.</p>';
-  Object.keys(groups).sort().forEach(grp=>{
-    html += '<div class="group-title">'+grp+'</div><div class="gloss-grid">';
-    groups[grp].sort((a,b)=>GLOSSARY[a].term.localeCompare(GLOSSARY[b].term)).forEach(id=>{
-      const g=GLOSSARY[id];
-      html += '<div class="gloss-card" data-term="'+id+'"><div class="gt">'+g.term+'</div><div class="gd">'+(g.eli5||'').replace(/<[^>]+>/g,'')+'</div>'
-        + (g.graphic?'<span class="badge">interactive ▸</span>':'')+'</div>';
+  // group by deck -> topic
+  const OTHER={id:'__other', name:'Other', color:'#6a7385'};
+  const byDeck={};
+  ids.forEach(id=>{ const g=GLOSSARY[id]; const topic=g.group||'__none'; const deck=TOPIC2DECK[topic]||OTHER;
+    const db=byDeck[deck.id]||(byDeck[deck.id]={deck, topics:{}}); (db.topics[topic]=db.topics[topic]||[]).push(id); });
+  const order=DECKS.map(d=>d.id).concat(['__other']);
+  let html = '<p style="color:var(--ink-dim);font-size:13.5px;margin-top:0">Click any concept to open it. Inside, every underlined word drills deeper. <b>'+ids.length+'</b> concepts across <b>'+Object.keys(byDeck).length+'</b> decks.</p>';
+  order.forEach(did=>{ const db=byDeck[did]; if(!db) return; const dc=db.deck.color||'#5b9dff';
+    html+='<div class="deck-section"><div class="deck-h" style="--dc:'+dc+'">'+db.deck.name+'</div>';
+    Object.keys(db.topics).sort((a,b)=>(SECTIONS[a]||a).localeCompare(SECTIONS[b]||b)).forEach(topic=>{
+      html+='<div class="topic-h">'+(SECTIONS[topic]||(topic==='__none'?'General':topic))+'</div><div class="gloss-grid">';
+      db.topics[topic].sort((a,b)=>GLOSSARY[a].term.localeCompare(GLOSSARY[b].term)).forEach(id=>{ const g=GLOSSARY[id];
+        html+='<div class="gloss-card" data-term="'+id+'"><div class="gt">'+g.term+'</div><div class="gd">'+(g.eli5||'').replace(/<[^>]+>/g,'')+'</div>'+(g.graphic?'<span class="badge">interactive ▸</span>':'')+'</div>'; });
+      html+='</div>';
     });
-    html += '</div>';
+    html+='</div>';
   });
   v.innerHTML = html;
   v.querySelectorAll('.gloss-card').forEach(card=> card.onclick=()=> openTerm(card.dataset.term, true));
@@ -1020,21 +1051,18 @@ function renderExamResults(v){
    ============================================================================ */
 const searchBox = document.getElementById('searchBox');
 const searchResults = document.getElementById('searchResults');
-searchBox.addEventListener('input', ()=>{
+let _searchT=null;
+searchBox.addEventListener('input', ()=>{ clearTimeout(_searchT); _searchT=setTimeout(runSearch, 130); });
+function runSearch(){
   const q = searchBox.value.trim().toLowerCase();
   if(!q){ searchResults.classList.remove('show'); return; }
-  const hits = [];
-  for(const id in GLOSSARY){
-    const g = GLOSSARY[id];
-    const hay = (g.term+' '+(g.aliases||[]).join(' ')+' '+(g.eli5||'')).toLowerCase();
-    if(hay.includes(q)) hits.push(id);
-    if(hits.length>=12) break;
-  }
-  if(!hits.length){ searchResults.innerHTML='<div class="sr-item"><div class="d">No concept found. Try Study or Test.</div></div>'; }
-  else searchResults.innerHTML = hits.map(id=>'<div class="sr-item" data-term="'+id+'"><div class="t">'+GLOSSARY[id].term+'</div><div class="d">'+(GLOSSARY[id].eli5||'').replace(/<[^>]+>/g,'').slice(0,70)+'…</div></div>').join('');
+  if(!_searchIdx) buildSearchIndex();
+  const hits=[]; for(const e of _searchIdx){ if(e.hay.indexOf(q)>=0){ hits.push(e.id); if(hits.length>=14) break; } }
+  if(!hits.length){ searchResults.innerHTML='<div class="sr-item"><div class="d">No concept found.</div></div>'; }
+  else searchResults.innerHTML = hits.map(id=>{ const g=GLOSSARY[id], d=TOPIC2DECK[g.group]; return '<div class="sr-item" data-term="'+id+'"><div class="t">'+g.term+(d?' <span class="sr-deck">'+d.name+'</span>':'')+'</div><div class="d">'+(g.eli5||'').replace(/<[^>]+>/g,'').slice(0,70)+'…</div></div>'; }).join('');
   searchResults.classList.add('show');
   searchResults.querySelectorAll('.sr-item[data-term]').forEach(it=> it.onclick=()=>{ openTerm(it.dataset.term, true); searchResults.classList.remove('show'); searchBox.value=''; });
-});
+}
 document.addEventListener('click', e=>{ if(!e.target.closest('.search')) searchResults.classList.remove('show'); });
 
 /* ============================================================================
@@ -1124,10 +1152,14 @@ function boot(){
   // merge enhancement layer (equations, multi-examples, acronym expansions) into existing concepts
   if(typeof ENHANCE !== 'undefined'){ for(const id in ENHANCE){ if(GLOSSARY[id]) Object.assign(GLOSSARY[id], ENHANCE[id]); else GLOSSARY[id]=ENHANCE[id]; } }
   QUIZ.push(...QUIZ_DATA);
+  if(typeof DECKS_DATA!=='undefined') DECKS.push(...DECKS_DATA);
+  DECKS.forEach(d=>{ (d.topics||[]).forEach(t=>{ TOPIC2DECK[t]=d; }); });
   buildAlias();
+  buildSearchIndex();
   updateDueBadge();
   render();
 }
+function buildSearchIndex(){ _searchIdx = Object.keys(GLOSSARY).map(id=>{ const g=GLOSSARY[id]; return {id, hay:(g.term+' '+(g.aliases||[]).join(' ')+' '+(g.eli5||'')).toLowerCase()}; }); }
 </script>
 
 <!-- ============================================================================
