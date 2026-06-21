@@ -94,6 +94,9 @@ window.MathJax = {
   .topic-h { font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-dim); margin: 14px 0 8px 2px; font-weight: 700; }
   .sr-deck { font-size: 10px; color: var(--ink-dim); font-weight: 500; background: var(--panel); border:1px solid var(--line); border-radius:999px; padding:0 6px; margin-left:6px; }
   .count { color: var(--ink-dim); font-size: 12.5px; margin-left: auto; }
+  .bp-select { width: 100%; max-width: 340px; margin: 6px auto 4px; padding: 8px; border-radius: 8px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font-size: 13.5px; }
+  .bp-blurb, .bp-pool { font-size: 12px; color: var(--ink-dim); margin: 4px 0; }
+  #lenpick button.off { opacity: .4; cursor: not-allowed; }
 
   .flash {
     background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
@@ -924,35 +927,92 @@ function renderTest(v){
 /* ============================================================================
    EXAM SIMULATOR  — section-weighted, timed, auto-generated from all cards
    ============================================================================ */
-const NASAA_AREAS = {
-  "Economic Factors (15%)": { weight:0.15, secs:["ECON","IND","TVM","TECH"] },
-  "Investment Vehicles (25%)": { weight:0.25, secs:["MM","FI","EQ","POOL","INS","DERIV","ALT"] },
-  "Strategies (30%)": { weight:0.30, secs:["SUIT","RISK","RAR","MPT","STRAT","TAX","RET","EDU","ACCT","PERF"] },
-  "Laws & Ethics (30%)": { weight:0.30, secs:["IAA","USA","FED","AML","REGBI","ETH"] }
+/* Curated cross-deck "interview" mocks. Topic weights are RELATIVE (auto-normalized). */
+const EXAM_BLUEPRINTS_CURATED = {
+  "interview:senior-de": { label:"Senior Data Engineer", group:"interview", pass:0.72,
+    blurb:"Streaming-heavy: messaging, delivery semantics, lakehouse modeling.",
+    topics:{ MSG:3, DELIV:3, MEDALLION:2, EDA:1 } },
+  "interview:backend-platform": { label:"Backend / Platform", group:"interview", pass:0.72,
+    blurb:"Event-driven architecture and reliable messaging.",
+    topics:{ EDA:3, MSG:2, DELIV:2 } }
 };
-function secArea(sec){ for(const a in NASAA_AREAS){ if(NASAA_AREAS[a].secs.indexOf(sec)>=0) return a; } return null; }
+/* Live registry, rebuilt at boot from DECKS + CARDS so content waves need no exam edits. */
+let EXAM_BLUEPRINTS = {};
+let examBlueprintId = "all";
+function bpEligible(bp){ const t=Object.keys(bp.topics); return CARDS.filter(c=> t.indexOf(c.sec)>=0); }
+function bpPoolSize(bp){ return bpEligible(bp).length; }
+function buildBlueprints(){
+  EXAM_BLUEPRINTS = {};
+  const cardSecs = new Set(CARDS.map(c=>c.sec));
+  // (1) All-cards default: every live topic, equal weight
+  const allTopics={}; cardSecs.forEach(t=> allTopics[t]=1);
+  EXAM_BLUEPRINTS["all"] = { label:"All decks", group:"all", pass:0.72, blurb:"Every card across every deck.", topics:allTopics };
+  // (2) one mock per deck that owns a card-bearing topic; topic weight = its card count
+  DECKS.forEach(d=>{ const tw={}; (d.topics||[]).forEach(t=>{ if(cardSecs.has(t)) tw[t]=CARDS.filter(c=>c.sec===t).length; });
+    if(Object.keys(tw).length) EXAM_BLUEPRINTS["deck:"+d.id] = { label:d.name, group:"deck", deckColor:d.color, pass:0.72, blurb:"Single-deck mock.", topics:tw }; });
+  // (3) curated interviews: keep only topics with live cards; drop the blueprint if it empties
+  for(const id in EXAM_BLUEPRINTS_CURATED){ const bp=EXAM_BLUEPRINTS_CURATED[id]; const tw={};
+    for(const t in bp.topics){ if(cardSecs.has(t)) tw[t]=bp.topics[t]; }
+    if(Object.keys(tw).length) EXAM_BLUEPRINTS[id] = Object.assign({}, bp, {topics:tw}); }
+  // (4) self-heal a stale selection
+  if(!EXAM_BLUEPRINTS[examBlueprintId]) examBlueprintId = "all";
+}
 function stripHtml(h){ const d=document.createElement('div'); d.innerHTML=h; return (d.textContent||'').replace(/\s+/g,' ').trim(); }
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function firstSentence(txt){ const m=txt.match(/^.*?[.:](\s|$)/); let s=m?m[0]:txt; if(s.length<45) s=txt.slice(0,170); return s.trim(); }
 
-function buildExam(n){
-  const eligible = CARDS.filter(c=> secArea(c.sec));
-  const byArea = {}; for(const a in NASAA_AREAS) byArea[a]=[];
-  eligible.forEach(c=> byArea[secArea(c.sec)].push(c));
-  const areas = Object.keys(NASAA_AREAS);
-  let counts = areas.map(a=> Math.round(n*NASAA_AREAS[a].weight));
-  counts[0] += n - counts.reduce((x,y)=>x+y,0);   // absorb rounding
+// blueprint-aware MCQ generator. n = requested length; bpId selects the active blueprint.
+// Guarantees: builds exactly min(n, poolSize) questions; never over-draws a thin topic;
+// a 1-card topic still yields a 4-choice MCQ via cross-pool distractor borrowing;
+// returns [] only when the blueprint has no eligible cards (caller shows empty-state).
+function buildExam(n, bpId){
+  const bp = EXAM_BLUEPRINTS[bpId] || EXAM_BLUEPRINTS["all"];
+  const eligible = bpEligible(bp);
+  if(!eligible.length) return [];
+  n = Math.min(n, eligible.length);                 // tiny-pool clamp: 12 cards => max 12 Qs
+
+  // group eligible cards by topic (card.sec); drop topics with no cards
+  const byTopic = {}; Object.keys(bp.topics).forEach(t=> byTopic[t]=[]);
+  eligible.forEach(c=> byTopic[c.sec].push(c));
+  const topics = Object.keys(byTopic).filter(t=> byTopic[t].length);
+
+  // relative-weight -> integer counts, each clamped to that topic's available cards, >=1 where possible
+  const wsum = topics.reduce((s,t)=> s + (bp.topics[t]||0), 0) || topics.length;
+  const cap = t=> byTopic[t].length;
+  let counts = topics.map(t=> Math.min(cap(t), Math.max(1, Math.round(n * (bp.topics[t]||1) / wsum))));
+  let total = counts.reduce((a,b)=>a+b,0);
+  let guard = 0;
+  while(total > n && guard++ < 9999){               // trim from the largest allocation still >1
+    let idx=-1, best=1; topics.forEach((t,i)=>{ if(counts[i]>best){ best=counts[i]; idx=i; } });
+    if(idx<0) break; counts[idx]--; total--;
+  }
+  guard = 0;
+  while(total < n && guard++ < 9999){                // grow the topic with the most spare cards
+    let idx=-1, slack=0; topics.forEach((t,i)=>{ const s=cap(t)-counts[i]; if(s>slack){ slack=s; idx=i; } });
+    if(idx<0) break; counts[idx]++; total++;
+  }
+
+  // build questions per topic
   const qs=[];
-  areas.forEach((a,idx)=>{
-    const pool = shuffle(byArea[a]); const need = counts[idx];
-    for(let k=0; k<need && k<pool.length; k++){
-      const card = pool[k];
-      const correct = card.front;
-      const distract = shuffle(pool.filter(c=>c.front!==correct)).slice(0,3).map(c=>c.front);
+  topics.forEach((t,i)=>{
+    const pool = shuffle(byTopic[t]);
+    for(let k=0; k<counts[i] && k<pool.length; k++){
+      const card = pool[k], correct = card.front;
+      // distractors: prefer same-topic fronts; if <3, escalate to the blueprint pool, then ALL cards,
+      // so even a single-card topic (e.g. a 1-card deck mock) still yields a full 4-choice MCQ.
+      let distract = shuffle(pool.filter(c=>c.front!==correct)).slice(0,3).map(c=>c.front);
+      if(distract.length < 3){
+        [eligible, CARDS].forEach(src=>{ if(distract.length>=3) return;
+          const extra = shuffle(src.filter(c=> c.front!==correct && distract.indexOf(c.front)<0)).map(c=>c.front);
+          distract = distract.concat(extra).slice(0,3); });
+      }
       const choices = shuffle([correct].concat(distract));
       let sent = firstSentence(stripHtml(card.back));
-      try { const r = new RegExp(stripHtml(correct).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'); sent = sent.replace(r,'_____'); } catch(e){}
-      qs.push({ stem:'Which concept best matches this description?  “'+sent+'”', choices, answer:choices.indexOf(correct), area:a, sec:card.sec, back:card.back, front:correct });
+      try { const r=new RegExp(stripHtml(correct).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'); sent=sent.replace(r,'_____'); } catch(e){}
+      qs.push({ stem:'Which concept best matches this description?  “'+sent+'”',
+                choices, answer:choices.indexOf(correct),
+                area:(SECTIONS[card.sec]||card.sec),   // results tally keyed by topic display name
+                sec:card.sec, back:card.back, front:correct });
     }
   });
   return shuffle(qs);
@@ -961,22 +1021,52 @@ function buildExam(n){
 let examState=null, examTimer=null;
 function renderExam(v){
   if(!examState){
+    const groups = { interview:[], deck:[], all:[] };
+    Object.keys(EXAM_BLUEPRINTS).forEach(id=>{ const bp=EXAM_BLUEPRINTS[id]; (groups[bp.group]||groups.deck).push({id,bp}); });
+    const opt = arr => arr.map(o=>'<option value="'+o.id+'"'+(o.id===examBlueprintId?' selected':'')+'>'+o.bp.label+' ('+bpPoolSize(o.bp)+')</option>').join('');
     v.innerHTML = '<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
       + '<div class="qtext">Exam Simulator</div>'
-      + '<p style="color:var(--ink-dim)">Questions are sampled across the decks. Pass mark is 75%. Miss anything and you can drill into it afterward.</p>'
+      + '<p style="color:var(--ink-dim)">Pick a blueprint, length, and timing. <span id="passCopy"></span></p>'
+      + '<select id="bpPick" class="bp-select">'
+      +   (groups.interview.length?'<optgroup label="Interview mocks">'+opt(groups.interview)+'</optgroup>':'')
+      +   (groups.deck.length?'<optgroup label="Single-deck mocks">'+opt(groups.deck)+'</optgroup>':'')
+      +   (groups.all.length?'<optgroup label="All decks">'+opt(groups.all)+'</optgroup>':'')
+      + '</select>'
+      + '<p id="bpBlurb" class="bp-blurb"></p>'
       + '<div class="toggle-row" style="justify-content:center" id="lenpick">'
-      + '<button data-n="20">Quick · 20</button><button data-n="60" class="on">Standard · 60</button><button data-n="130">Full · 130</button>'
+      +   '<button data-n="20">Quick · 20</button><button data-n="60" class="on">Standard · 60</button><button data-n="130">Full · 130</button>'
       + '</div>'
+      + '<p id="poolNote" class="bp-pool"></p>'
       + '<label style="display:block;margin:14px 0;color:var(--ink-dim);font-size:13px"><input type="checkbox" id="timed" checked> Timed (≈78 sec/question)</label>'
       + '<button class="btn primary" id="startExam">Begin</button>'
       + '</div></div>';
     let len=60;
-    v.querySelectorAll('#lenpick button').forEach(b=> b.onclick=()=>{ v.querySelectorAll('#lenpick button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); len=+b.dataset.n; });
+    const lenBtns = [...v.querySelectorAll('#lenpick button')];
+    function syncPicker(){
+      const bp = EXAM_BLUEPRINTS[examBlueprintId]; const pool = bpPoolSize(bp);
+      v.querySelector('#bpBlurb').textContent = bp.blurb||'';
+      v.querySelector('#passCopy').textContent = 'Pass mark is '+Math.round((bp.pass||0.72)*100)+'%.';
+      lenBtns.forEach(b=>{ const tooBig=(+b.dataset.n)>pool && pool>0; b.disabled=tooBig; b.classList.toggle('off',tooBig); });
+      if(len>pool){ const enabled=lenBtns.filter(b=>!b.disabled).map(b=>+b.dataset.n);
+        len = enabled.length ? Math.max(...enabled) : pool;
+        lenBtns.forEach(b=> b.classList.toggle('on', +b.dataset.n===len)); }
+      const note=v.querySelector('#poolNote');
+      note.textContent = pool===0 ? 'No cards in this blueprint yet.'
+                       : pool<20  ? 'Only '+pool+' concepts here — exam will use all '+Math.min(len,pool)+'.'
+                       : pool+' cards available.';
+      v.querySelector('#startExam').disabled = pool===0;
+    }
+    v.querySelector('#bpPick').onchange = e=>{ examBlueprintId=e.target.value; syncPicker(); };
+    lenBtns.forEach(b=> b.onclick=()=>{ if(b.disabled) return; lenBtns.forEach(x=>x.classList.remove('on')); b.classList.add('on'); len=+b.dataset.n; });
     v.querySelector('#startExam').onclick=()=>{
       const timed=v.querySelector('#timed').checked;
-      examState={ qs:buildExam(len), pos:0, answers:[], timed, remaining:Math.round(len*78) };
+      const bp=EXAM_BLUEPRINTS[examBlueprintId];
+      const qs=buildExam(len, examBlueprintId);
+      if(!qs.length){ v.querySelector('#poolNote').textContent='This mock has no cards yet — pick another.'; return; }
+      examState={ qs, pos:0, answers:[], timed, remaining:Math.round(qs.length*78), bpId:examBlueprintId, pass:(bp.pass||0.72) };
       renderExam(v);
     };
+    syncPicker();
     return;
   }
   if(examState.pos>=examState.qs.length){ return renderExamResults(v); }
@@ -1018,11 +1108,13 @@ function renderExamResults(v){
   const qs=examState.qs, ans=examState.answers;
   let correct=0; const tally={};
   qs.forEach((q,i)=>{ const ok=ans[i]===q.answer; if(ok)correct++; (tally[q.area]=tally[q.area]||{c:0,t:0}); tally[q.area].t++; if(ok)tally[q.area].c++; });
-  const pct=Math.round(correct/qs.length*100), pass=pct>=72;
+  const passMark=Math.round((examState.pass||0.72)*100);
+  const pct=Math.round(correct/qs.length*100), pass=pct>=passMark;
   let html='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
     + '<div class="qtext">'+(pass?'<span style="color:var(--good)">PASS</span>':'<span style="color:var(--bad)">Below pass mark</span>')+'</div>'
     + '<div style="font-size:46px;font-weight:800;color:'+(pass?'var(--good)':'var(--bad)')+'">'+pct+'%</div>'
-    + '<p style="color:var(--ink-dim)">'+correct+' / '+qs.length+' correct · pass mark 72%</p>'
+    + '<div class="qmeta" style="justify-content:center;margin:2px 0 8px"><span>'+((EXAM_BLUEPRINTS[examState.bpId]||{label:'Exam'}).label)+'</span></div>'
+    + '<p style="color:var(--ink-dim)">'+correct+' / '+qs.length+' correct · pass mark '+passMark+'%</p>'
     + '<div class="readout" style="text-align:left">';
   Object.keys(tally).forEach(a=>{ const t=tally[a]; html+='<div class="ro"><div class="k">'+a+'</div><div class="v">'+t.c+'/'+t.t+' · '+Math.round(t.c/t.t*100)+'%</div></div>'; });
   html += '</div><div class="nav-row"><button class="btn" id="examReview">Review misses</button><button class="btn primary" id="examAgain">New exam</button></div>'
@@ -1141,8 +1233,29 @@ document.addEventListener('keydown', e=>{
   if(mode!=='review' || !reviewState || reviewState.pos>=reviewState.queue.length) return;
   if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   const v=document.getElementById('view');
-  if(e.key===' '){ if(!reviewState.shown){ e.preventDefault(); reviewState.shown=true; renderReview(v); } }
+  if(e.key===' '){ e.preventDefault(); if(!reviewState.shown){ reviewState.shown=true; renderReview(v); } }
   else if(reviewState.shown){ const map={'1':'again','2':'hard','3':'good','4':'easy'}; if(map[e.key]){ e.preventDefault(); rvGradeAdvance(map[e.key], v); } }
+});
+
+/* Study / Quiz / Exam keyboard (Review keeps its own handler above; mutually mode-gated). */
+document.addEventListener('keydown', e=>{
+  if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;   // don't fire while typing/selecting
+  if(document.activeElement===searchBox) return;
+  if(drawer.classList.contains('show')) return;                           // term modal open -> Escape owns the keys
+  const v=document.getElementById('view');
+  if(mode==='study'){
+    if(!studyCards().length) return;
+    if(e.key===' '||e.key==='f'){ e.preventDefault(); const b=document.getElementById('flip'); if(b) b.click(); }
+    else if(e.key==='ArrowRight'){ e.preventDefault(); const b=document.getElementById('next'); if(b) b.click(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); const b=document.getElementById('prev'); if(b) b.click(); }
+  } else if(mode==='test'){
+    if(/^[1-4]$/.test(e.key)){ if(quizAnswered) return; const b=v.querySelector('.choice[data-i="'+(+e.key-1)+'"]'); if(b){ e.preventDefault(); b.click(); } }
+    else if(e.key==='Enter'){ const qn=document.getElementById('qnext'); if(qn && qn.style.display!=='none'){ e.preventDefault(); qn.click(); } }
+  } else if(mode==='exam' && examState && examState.pos<examState.qs.length){
+    if(/^[1-4]$/.test(e.key)){ const b=v.querySelector('.choice[data-i="'+(+e.key-1)+'"]'); if(b){ e.preventDefault(); b.click(); } }
+    else if(e.key==='Enter'){ const nx=document.getElementById('examNext'); if(nx && !nx.disabled){ e.preventDefault(); nx.click(); } }
+    else if(e.key==='s'||e.key==='S'){ e.preventDefault(); const b=document.getElementById('examSkip'); if(b) b.click(); }
+  }
 });
 
 function boot(){
@@ -1154,6 +1267,7 @@ function boot(){
   QUIZ.push(...QUIZ_DATA);
   if(typeof DECKS_DATA!=='undefined') DECKS.push(...DECKS_DATA);
   DECKS.forEach(d=>{ (d.topics||[]).forEach(t=>{ TOPIC2DECK[t]=d; }); });
+  buildBlueprints();
   buildAlias();
   buildSearchIndex();
   updateDueBadge();
