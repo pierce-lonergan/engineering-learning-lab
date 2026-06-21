@@ -8,7 +8,7 @@ DECKS_DATA.push(
   { id:"foundations", name:"Foundations — CS & System Design",      color:"#7c98c8", topics:["FND-BIGO","FND-DS","FND-ALGO","FND-SYS","FND-CAP","FND-NET","FND-CONC","FND-HASH","FND-CACHE","FND-LB","FND-RL","FND-API"] },
   { id:"streaming",   name:"Distributed Systems & Streaming",        color:"#5fb0a8", topics:["MSG","DELIV","DSS-KAFKA","DSS-PART","DSS-CONSUMER","DSS-PROC","DSS-TIME","DSS-EOS","DSS-CONSENSUS","DSS-COORD","DSS-CLOCK","DSS-TXN","DSS-SCALE"] },
   { id:"architecture",name:"Software Architecture & Design",          color:"#8b7cff", topics:["EDA"] },
-  { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:[] },
+  { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:["DB-ACID","DB-ISO","DB-MVCC","DB-STORAGE","DB-INDEX","DB-QUERY","DB-REPL","DB-SHARD","DB-NOSQL","DB-WIDECOL","DB-NEWSQL","DB-MODELING"] },
   { id:"jvm",         name:"Java & the JVM",                          color:"#e07a5c", topics:[] },
   { id:"spark",       name:"Big Data Processing — Apache Spark",      color:"#f0a866", topics:[] },
   { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:[] },
@@ -50,5 +50,18 @@ Object.assign(SECTIONS_DATA, {
   "FND-CACHE": "Caching & Eviction",
   "FND-LB":    "Load Balancing & Proxies",
   "FND-RL":    "Rate Limiting & Backpressure",
-  "FND-API":   "API Design & Protocols"
+  "FND-API":   "API Design & Protocols",
+  // Databases, Transactions & NoSQL
+  "DB-ACID":      "ACID & Transactions",
+  "DB-ISO":       "Isolation Levels & Anomalies",
+  "DB-MVCC":      "Concurrency Control & MVCC",
+  "DB-STORAGE":   "Storage Engines: B-Tree vs LSM",
+  "DB-INDEX":     "Indexing",
+  "DB-QUERY":     "Query Execution & Optimization",
+  "DB-REPL":      "Replication",
+  "DB-SHARD":     "Partitioning & Sharding",
+  "DB-NOSQL":     "NoSQL Data Models",
+  "DB-WIDECOL":   "Wide-Column Stores (Cassandra/DynamoDB)",
+  "DB-NEWSQL":    "Distributed SQL / NewSQL",
+  "DB-MODELING":  "Schema Design & Normalization"
 });
