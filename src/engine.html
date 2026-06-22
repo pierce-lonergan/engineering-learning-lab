@@ -164,6 +164,24 @@ window.MathJax = {
   @keyframes veloMile { 0% { transform: translateX(-50%) scale(.5); opacity: 0; } 22% { transform: translateX(-50%) scale(1.12); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 0; } }
   .velo-score.pop { animation: veloPop .32s; }
   @keyframes veloPop { 0% { transform: scale(1); } 40% { transform: scale(1.42); color: #fff; } 100% { transform: scale(1); } }
+  /* Velocity — deeper space: nebula, planets, shockwave, trail, ORBIT launch */
+  .velo-nebula { position: absolute; inset: 0; pointer-events: none; opacity: .4; transition: opacity .6s, background .6s;
+    background: radial-gradient(60% 52% at 30% 92%, rgba(91,124,255,.34), transparent 70%), radial-gradient(50% 42% at 74% 80%, rgba(213,111,160,.24), transparent 70%); }
+  .velo-sky.e1 .velo-nebula { opacity: .62; }
+  .velo-sky.e2 .velo-nebula { opacity: .82; background: radial-gradient(62% 55% at 34% 92%, rgba(255,160,90,.4), transparent 70%), radial-gradient(50% 45% at 72% 80%, rgba(255,90,140,.3), transparent 70%); }
+  .velo-sky.e3 .velo-nebula { opacity: 1; background: radial-gradient(72% 60% at 40% 96%, rgba(255,140,80,.5), transparent 72%), radial-gradient(56% 50% at 70% 82%, rgba(255,210,100,.34), transparent 70%); }
+  .velo-planet { position: absolute; top: 0; border-radius: 50%; pointer-events: none; animation: veloFall linear infinite; }
+  .velo-ring { position: absolute; border: 3px solid rgba(255,255,255,.55); border-radius: 50%; pointer-events: none; width: 12px; height: 12px; margin: -6px 0 0 -6px; animation: veloRing .55s ease-out forwards; }
+  @keyframes veloRing { from { transform: scale(.4); opacity: .9; } to { transform: scale(5.5); opacity: 0; border-width: .5px; } }
+  .velo-trail { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: rgba(255,170,90,.7); pointer-events: none; margin: -3px 0 0 -3px; animation: veloTrail .55s ease-out forwards; }
+  @keyframes veloTrail { from { transform: translateY(0) scale(1); opacity: .7; } to { transform: translateY(24px) scale(.2); opacity: 0; } }
+  .velo-orbit { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+  .velo-orbit .ot { font-weight: 900; font-size: 22px; letter-spacing: .07em; color: #fff; text-shadow: 0 0 18px #5b9dff, 0 2px 8px rgba(0,0,0,.7); animation: veloOrbit 1.4s ease-out forwards; }
+  @keyframes veloOrbit { 0% { transform: scale(.4); opacity: 0; } 24% { transform: scale(1.16); opacity: 1; } 74% { opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+  .velo-sky.orbitflash::after { content: ""; position: absolute; inset: 0; pointer-events: none; animation: veloFlash .7s ease-out;
+    background: radial-gradient(circle at 50% 60%, rgba(255,255,255,.6), rgba(91,157,255,.32) 40%, transparent 76%); }
+  .velo-rocket.launch { animation: veloLaunch 1.05s cubic-bezier(.4,0,.2,1); }
+  @keyframes veloLaunch { 0% { transform: translateY(-58px); } 28% { transform: translateY(-74px) scale(1.06); } 60% { transform: translateY(-38px); } 100% { transform: translateY(-58px); } }
 
   .flash {
     background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
@@ -1371,7 +1389,20 @@ function veloStreakLines(sky){ if(!sky) return; for(let i=0;i<7;i++){ const l=do
 function veloFloatTxt(sky, txt){ if(!sky) return; const c=veloRocketCenter(sky); const f=document.createElement('div'); f.className='velo-float'; f.textContent=txt;
   f.style.left=c.x+'%'; f.style.top=(c.y-6)+'%'; sky.appendChild(f); setTimeout(()=>f.remove(),900); }
 function veloMilestone(sky, s){ if(!sky) return; const m=document.createElement('div'); m.className='velo-milestone';
-  m.textContent = s>=10?'🚀 ORBIT! '+s+' streak':'⚡ BOOST · '+s+' streak'; sky.appendChild(m); setTimeout(()=>m.remove(),1200); }
+  m.textContent = '⚡ BOOST · '+s+' streak'; sky.appendChild(m); setTimeout(()=>m.remove(),1200); }
+function veloPlanets(el){ if(!el) return; const pal=[['#6a7bd0','#33408a'],['#c98a5c','#7a4f30'],['#5fb0a8','#2f6b66'],['#b07e9e','#664860'],['#d56f7a','#7a3a44']];
+  let h=''; const n=2+Math.floor(Math.random()*2);
+  for(let i=0;i<n;i++){ const t=pal[Math.floor(Math.random()*pal.length)], sz=Math.round(12+Math.random()*16), x=Math.round(Math.random()*86), dur=(13+Math.random()*12).toFixed(1), delay=(-Math.random()*24).toFixed(1), ring=Math.random()<0.4;
+    h+='<div class="velo-planet" style="left:'+x+'%;width:'+sz+'px;height:'+sz+'px;background:radial-gradient(circle at 34% 30%, '+t[0]+', '+t[1]+');animation-duration:'+dur+'s;animation-delay:'+delay+'s'+(ring?';box-shadow:0 0 0 1px '+t[0]+'55, 0 0 10px '+t[0]+'44':'')+'"></div>'; }
+  el.innerHTML=h; }
+function veloRing(sky){ if(!sky) return; const c=veloRocketCenter(sky); const r=document.createElement('i'); r.className='velo-ring'; r.style.left=c.x+'%'; r.style.top=c.y+'%'; sky.appendChild(r); setTimeout(()=>r.remove(),560); }
+function veloTrail(sky){ if(!sky) return; const c=veloRocketCenter(sky); for(let i=0;i<5;i++){ const tr=document.createElement('i'); tr.className='velo-trail';
+  tr.style.left=(c.x+(Math.random()*8-4)).toFixed(1)+'%'; tr.style.top=(c.y+9)+'%'; tr.style.animationDelay=(i*0.04).toFixed(2)+'s'; sky.appendChild(tr); setTimeout(()=>tr.remove(),600); } }
+function veloOrbitSeq(sky){ if(!sky) return;
+  sky.classList.add('orbitflash'); setTimeout(()=>sky.classList.remove('orbitflash'),720);
+  const o=document.createElement('div'); o.className='velo-orbit'; o.innerHTML='<div class="ot">🚀 ORBIT</div>'; sky.appendChild(o); setTimeout(()=>o.remove(),1400);
+  const rk=document.getElementById('veloRocket'); if(rk){ rk.classList.add('launch'); setTimeout(()=>{ if(rk) rk.classList.remove('launch'); },1080); }
+  for(let k=0;k<3;k++) setTimeout(()=>veloBurst(sky), k*130); }
 
 function renderVelocity(v){
   if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
@@ -1415,7 +1446,7 @@ function renderVelocity(v){
     +'<div class="velo-hud"><span class="velo-score" id="veloScore">'+velo.score+'</span>'
     +  '<span class="velo-streak'+(velo.streak>=3?' hot':'')+'">'+(velo.streak>0?'🔥 '+velo.streak:'')+'</span>'
     +  '<span class="velo-hearts">'+heartsHtml+'</span></div>'
-    +'<div class="velo-sky" id="veloSky"><div class="velo-stars" id="veloStars"></div><div class="velo-flash"></div>'
+    +'<div class="velo-sky'+(velo.streak>=8?' e3':velo.streak>=5?' e2':velo.streak>=2?' e1':'')+'" id="veloSky"><div class="velo-nebula"></div><div class="velo-planets" id="veloPlanets"></div><div class="velo-stars" id="veloStars"></div><div class="velo-flash"></div>'
     +  '<div class="velo-rocket" id="veloRocket" style="transform:translateY('+veloAltitude(velo.streak)+'px)"><div class="velo-rocket-inner" id="veloRocketInner">'+VELO_ROCKET_SVG+'<div class="velo-flame"></div></div></div>'
     +'</div>'
     +(velo.zen?'':'<div class="velo-timebar"><div class="velo-timefill" id="veloTime"></div></div>')
@@ -1429,6 +1460,7 @@ function renderVelocity(v){
   if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
   v.querySelectorAll('.velo-tile').forEach(b=> b.onclick=()=> veloAnswer(+b.dataset.i, v, q, budget));
   veloStarfield(document.getElementById('veloStars'));
+  veloPlanets(document.getElementById('veloPlanets'));
   v.querySelector('#veloQuit').onclick=()=>{ velo.over=true; renderVelocity(v); };
   if(!velo.zen){
     const deadline=Date.now()+budget*1000; q._deadline=deadline;
@@ -1464,10 +1496,10 @@ function veloAnswer(idx, v, q, budget){
     const sky=document.getElementById('veloSky'), inner=document.getElementById('veloRocketInner'), rk=document.getElementById('veloRocket');
     if(rk) rk.style.transform='translateY('+veloAltitude(velo.streak)+'px)';           // climb with streak
     if(inner){ inner.classList.add('boost'); }
-    if(sky){ veloStreakLines(sky); veloBurst(sky); veloFloatTxt(sky,'+'+pts); }
+    if(sky){ veloStreakLines(sky); veloBurst(sky); veloFloatTxt(sky,'+'+pts); veloRing(sky); veloTrail(sky); }
     const sc=document.getElementById('veloScore'); if(sc){ sc.textContent=velo.score; sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop'); }
-    if(sky && (velo.streak===5||velo.streak===10||velo.streak===15||velo.streak===20)) veloMilestone(sky, velo.streak);
-    setTimeout(()=>{ velo.pos++; renderVelocity(v); }, 750);
+    if(sky){ if(velo.streak===10) veloOrbitSeq(sky); else if(velo.streak>0 && velo.streak%5===0) veloMilestone(sky, velo.streak); }
+    setTimeout(()=>{ velo.pos++; renderVelocity(v); }, velo.streak===10?1650:(velo.streak>0&&velo.streak%5===0?1100:750));
   } else {
     velo.streak=0; if(!velo.zen) velo.hearts--; velo.missed++;
     srsGrade(q.card,'again'); updateDueBadge();                 // miss -> reset + resurfaces soon
