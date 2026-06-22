@@ -12,7 +12,7 @@ DECKS_DATA.push(
   { id:"jvm",         name:"Java & the JVM",                          color:"#e07a5c", topics:["JVM-MEM","JVM-GC","JVM-JMM","JVM-CONC","JVM-COLLECT","JVM-LOOM","JVM-JIT","JVM-CLASS","JVM-LANG","JVM-MODERN","JVM-PERF","JVM-IO"] },
   { id:"spark",       name:"Big Data Processing — Apache Spark",      color:"#f0a866", topics:["SPARK-ARCH","SPARK-RDD","SPARK-DF","SPARK-CATALYST","SPARK-SHUFFLE","SPARK-PART","SPARK-SKEW","SPARK-JOINS","SPARK-MEMORY","SPARK-AQE","SPARK-STREAM","SPARK-TUNE"] },
   { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:[] },
-  { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:[] },
+  { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:["ML-EMBED","ML-ANN","ML-RAG","ML-RERANK","ML-SEARCH","ML-EVALIR","ML-TRAIN","ML-EVAL","ML-FEATURE","ML-XFMR","ML-MLOPS","ML-PROMPT"] },
   { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION"] },
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:[] },
   { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:[] },
@@ -89,5 +89,18 @@ Object.assign(SECTIONS_DATA, {
   "JVM-LANG":     "Core Language Semantics",
   "JVM-MODERN":   "Modern Java (8–21)",
   "JVM-PERF":     "Performance & Profiling",
-  "JVM-IO":       "I/O & Serialization"
+  "JVM-IO":       "I/O & Serialization",
+  // Applied ML & Information Retrieval
+  "ML-EMBED":     "Embeddings & Vector Representations",
+  "ML-ANN":       "Vector Search & ANN Indexes",
+  "ML-RAG":       "Retrieval-Augmented Generation",
+  "ML-RERANK":    "Rerankers & Late Interaction",
+  "ML-SEARCH":    "Information Retrieval Fundamentals",
+  "ML-EVALIR":    "Retrieval & RAG Evaluation",
+  "ML-TRAIN":     "ML Training Fundamentals",
+  "ML-EVAL":      "Model Evaluation & Metrics",
+  "ML-FEATURE":   "Feature Engineering & Data",
+  "ML-XFMR":      "Transformers & LLMs",
+  "ML-MLOPS":     "MLOps & Serving",
+  "ML-PROMPT":    "LLM Application Patterns"
 });
