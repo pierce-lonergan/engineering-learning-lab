@@ -106,6 +106,8 @@ window.MathJax = {
   .velo-hearts { font-size: 22px; letter-spacing: 3px; }
   .velo-hearts .hh { color: var(--bad); }
   .velo-hearts .hh-off { color: var(--line); }
+  .velo-hearts.hit { animation: veloHeartHit .42s; }
+  @keyframes veloHeartHit { 0%,100% { transform: scale(1); } 22% { transform: scale(1.35); } 55% { transform: scale(.82) rotate(-7deg); } }
   .velo-zen-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; font-weight: 700; }
   .velo-timebar { height: 6px; background: var(--panel2); border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
   .velo-timefill { height: 100%; width: 100%; background: var(--good); border-radius: 6px; transition: width .06s linear, background .3s; }
@@ -1619,6 +1621,8 @@ function veloAnswer(idx, v, q, budget){
     const why=firstSentence(stripHtml(q.card.back));
     if(fb) fb.innerHTML='<div class="velo-fb-no">'+(idx<0?'⏱ Time — ':'✗ ')+'Answer: <b>'+q.answer+'</b><div class="velo-why">'+why+'</div></div>';
     const over = !velo.zen && velo.hearts<=0;
+    const heartsEl=document.querySelector('.velo-hearts');                              // reflect the lost heart immediately (was only updated on next render)
+    if(heartsEl && !velo.zen){ heartsEl.innerHTML='<span class="hh">'+'♥'.repeat(Math.max(0,velo.hearts))+'</span><span class="hh-off">'+'♥'.repeat(Math.max(0,VELO_HEARTS-velo.hearts))+'</span>'; heartsEl.classList.remove('hit'); void heartsEl.offsetWidth; heartsEl.classList.add('hit'); }
     const skyN=document.getElementById('veloSky'), innerN=document.getElementById('veloRocketInner'), rkN=document.getElementById('veloRocket');
     if(skyN){ skyN.classList.add('flash'); setTimeout(function(){ if(skyN) skyN.classList.remove('flash'); },420); }
     if(!over){                                                                          // normal miss: fall back to ground, advance
