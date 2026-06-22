@@ -16,7 +16,7 @@ DECKS_DATA.push(
   { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION","LAKE-FORMATS","LAKE-ICEBERG","LAKE-PARQUET","LAKE-LAYOUT","LAKE-OLAP","LAKE-WAREHOUSE","LAKE-ETL","LAKE-OPT","LAKE-ACID","LAKE-STREAM","LAKE-CATALOG","LAKE-ENGINE"] },
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:["CLOUD-MODELS","CLOUD-COMPUTE","CLOUD-S3","CLOUD-NETWORK","CLOUD-IAM","CLOUD-DATA","CLOUD-STREAM","CLOUD-MSG","CLOUD-DB","CLOUD-IAC","CLOUD-OPS","CLOUD-WELLARCH"] },
   { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:["PY-DATAMODEL","PY-GIL","PY-IDIOMS","PY-FUNCTIONS","PY-TYPING","PY-PERF","PY-GOTCHAS","SCALA-FP","SCALA-COLLECTIONS","SCALA-TYPES","SCALA-PATTERN","SCALA-CONC"] },
-  { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:[] }
+  { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:["GOV-QUALITY","GOV-CONTRACTS","GOV-LINEAGE","GOV-CATALOG","GOV-MDM","GOV-PRIVACY","GOV-COMPLIANCE","GOV-ACCESS","GOV-DATAOBS","GOV-MESH","GOV-METADATA","GOV-OPMODEL"] }
 );
 
 /* topic codes -> display names */
@@ -167,5 +167,18 @@ Object.assign(SECTIONS_DATA, {
   "SCALA-COLLECTIONS":"Collections & for-Comprehensions",
   "SCALA-TYPES":      "Type System (case classes, ADTs, implicits)",
   "SCALA-PATTERN":    "Pattern Matching & Error Handling",
-  "SCALA-CONC":       "Concurrency (Futures, Akka)"
+  "SCALA-CONC":       "Concurrency (Futures, Akka)",
+  // Data Governance & Quality
+  "GOV-QUALITY":    "Data Quality Dimensions & Validation",
+  "GOV-CONTRACTS":  "Data Contracts & Schema Evolution",
+  "GOV-LINEAGE":    "Data Lineage & Provenance",
+  "GOV-CATALOG":    "Data Catalogs & Discovery",
+  "GOV-MDM":        "Master & Reference Data Management",
+  "GOV-PRIVACY":    "Data Privacy (PII, Masking, Anonymization)",
+  "GOV-COMPLIANCE": "Compliance & Regulation (GDPR/CCPA)",
+  "GOV-ACCESS":     "Data Access Governance & Security",
+  "GOV-DATAOBS":    "Data Observability",
+  "GOV-MESH":       "Data Mesh & Data-as-a-Product",
+  "GOV-METADATA":   "Metadata Management",
+  "GOV-OPMODEL":    "Governance Operating Model & Stewardship"
 });
