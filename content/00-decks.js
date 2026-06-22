@@ -15,7 +15,7 @@ DECKS_DATA.push(
   { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:["ML-EMBED","ML-ANN","ML-RAG","ML-RERANK","ML-SEARCH","ML-EVALIR","ML-TRAIN","ML-EVAL","ML-FEATURE","ML-XFMR","ML-MLOPS","ML-PROMPT"] },
   { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION","LAKE-FORMATS","LAKE-ICEBERG","LAKE-PARQUET","LAKE-LAYOUT","LAKE-OLAP","LAKE-WAREHOUSE","LAKE-ETL","LAKE-OPT","LAKE-ACID","LAKE-STREAM","LAKE-CATALOG","LAKE-ENGINE"] },
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:["CLOUD-MODELS","CLOUD-COMPUTE","CLOUD-S3","CLOUD-NETWORK","CLOUD-IAM","CLOUD-DATA","CLOUD-STREAM","CLOUD-MSG","CLOUD-DB","CLOUD-IAC","CLOUD-OPS","CLOUD-WELLARCH"] },
-  { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:[] },
+  { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:["PY-DATAMODEL","PY-GIL","PY-IDIOMS","PY-FUNCTIONS","PY-TYPING","PY-PERF","PY-GOTCHAS","SCALA-FP","SCALA-COLLECTIONS","SCALA-TYPES","SCALA-PATTERN","SCALA-CONC"] },
   { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:[] }
 );
 
@@ -154,5 +154,18 @@ Object.assign(SECTIONS_DATA, {
   "SEC-AUTHZ":     "Authorization & Access Control",
   "SEC-CRYPTO":    "Cryptography & TLS",
   "SEC-APPSEC":    "Application Security (OWASP)",
-  "SEC-THREAT":    "Threat Modeling & Secure Design"
+  "SEC-THREAT":    "Threat Modeling & Secure Design",
+  // Languages — Python & Scala
+  "PY-DATAMODEL":     "Python Data Model & Object Model",
+  "PY-GIL":           "The GIL & Concurrency",
+  "PY-IDIOMS":        "Pythonic Idioms, Iterators & Generators",
+  "PY-FUNCTIONS":     "Functions, Closures & Decorators",
+  "PY-TYPING":        "Typing, Dataclasses & Pydantic",
+  "PY-PERF":          "Performance, NumPy & Packaging",
+  "PY-GOTCHAS":       "Common Pitfalls & Gotchas",
+  "SCALA-FP":         "Functional Programming Core",
+  "SCALA-COLLECTIONS":"Collections & for-Comprehensions",
+  "SCALA-TYPES":      "Type System (case classes, ADTs, implicits)",
+  "SCALA-PATTERN":    "Pattern Matching & Error Handling",
+  "SCALA-CONC":       "Concurrency (Futures, Akka)"
 });
