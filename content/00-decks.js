@@ -13,7 +13,7 @@ DECKS_DATA.push(
   { id:"spark",       name:"Big Data Processing — Apache Spark",      color:"#f0a866", topics:["SPARK-ARCH","SPARK-RDD","SPARK-DF","SPARK-CATALYST","SPARK-SHUFFLE","SPARK-PART","SPARK-SKEW","SPARK-JOINS","SPARK-MEMORY","SPARK-AQE","SPARK-STREAM","SPARK-TUNE"] },
   { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:[] },
   { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:["ML-EMBED","ML-ANN","ML-RAG","ML-RERANK","ML-SEARCH","ML-EVALIR","ML-TRAIN","ML-EVAL","ML-FEATURE","ML-XFMR","ML-MLOPS","ML-PROMPT"] },
-  { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION"] },
+  { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION","LAKE-FORMATS","LAKE-ICEBERG","LAKE-PARQUET","LAKE-LAYOUT","LAKE-OLAP","LAKE-WAREHOUSE","LAKE-ETL","LAKE-OPT","LAKE-ACID","LAKE-STREAM","LAKE-CATALOG","LAKE-ENGINE"] },
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:[] },
   { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:[] },
   { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:[] }
@@ -102,5 +102,18 @@ Object.assign(SECTIONS_DATA, {
   "ML-FEATURE":   "Feature Engineering & Data",
   "ML-XFMR":      "Transformers & LLMs",
   "ML-MLOPS":     "MLOps & Serving",
-  "ML-PROMPT":    "LLM Application Patterns"
+  "ML-PROMPT":    "LLM Application Patterns",
+  // Lakehouse & Data Warehousing
+  "LAKE-FORMATS":   "Open Table Formats",
+  "LAKE-ICEBERG":   "Apache Iceberg Internals",
+  "LAKE-PARQUET":   "Columnar Storage (Parquet)",
+  "LAKE-LAYOUT":    "Partitioning, Clustering & Layout",
+  "LAKE-OLAP":      "OLAP & Dimensional Modeling",
+  "LAKE-WAREHOUSE": "Cloud Data Warehouses (Snowflake)",
+  "LAKE-ETL":       "ETL vs ELT & Ingestion",
+  "LAKE-OPT":       "File & Query Optimization",
+  "LAKE-ACID":      "Time Travel, Versioning & ACID",
+  "LAKE-STREAM":    "Streaming & Incremental Tables",
+  "LAKE-CATALOG":   "Catalogs & Metadata Governance",
+  "LAKE-ENGINE":    "Query Engines & Federation"
 });
