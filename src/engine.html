@@ -97,6 +97,36 @@ window.MathJax = {
   .bp-select { width: 100%; max-width: 340px; margin: 6px auto 4px; padding: 8px; border-radius: 8px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font-size: 13.5px; }
   .bp-blurb, .bp-pool { font-size: 12px; color: var(--ink-dim); margin: 4px 0; }
   #lenpick button.off { opacity: .4; cursor: not-allowed; }
+  /* Velocity arcade */
+  .velo-wrap { max-width: 560px; margin: 0 auto; }
+  .velo-hud { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-weight: 800; min-height: 26px; }
+  .velo-score { font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .velo-streak { font-size: 15px; color: var(--ink-dim); transition: color .2s; }
+  .velo-streak.hot { color: #ff7a45; }
+  .velo-hearts { font-size: 18px; letter-spacing: 2px; }
+  .velo-hearts .hh { color: var(--bad); }
+  .velo-hearts .hh-off { color: var(--line); }
+  .velo-zen-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; font-weight: 700; }
+  .velo-timebar { height: 6px; background: var(--panel2); border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
+  .velo-timefill { height: 100%; width: 100%; background: var(--good); border-radius: 6px; transition: width .06s linear, background .3s; }
+  .velo-prompt { font-size: 18.5px; line-height: 1.5; text-align: center; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 20px; margin-bottom: 16px; min-height: 84px; display: flex; align-items: center; justify-content: center; }
+  .velo-tiles { display: grid; gap: 10px; }
+  .velo-tile { position: relative; text-align: left; padding: 15px 16px 15px 48px; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; transition: transform .06s, border-color .15s, background .15s; }
+  .velo-tile:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+  .velo-tile:disabled { cursor: default; }
+  .velo-tile.correct { border-color: var(--good); background: rgba(70,211,154,.15); color: #fff; }
+  .velo-tile.wrong { border-color: var(--bad); background: rgba(255,107,107,.12); }
+  .velo-key { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; line-height: 24px; text-align: center; font-size: 12px; font-weight: 700; border-radius: 7px; background: var(--panel2); color: var(--ink-dim); }
+  .velo-feedback { min-height: 50px; margin-top: 14px; text-align: center; }
+  .velo-fb-ok { color: var(--good); font-weight: 800; font-size: 17px; }
+  .velo-spd { color: var(--warn); font-size: 13px; }
+  .velo-mult { color: var(--accent2); font-size: 13px; }
+  .velo-fb-no { color: var(--ink); font-size: 14px; }
+  .velo-fb-no b { color: var(--good); }
+  .velo-why { color: var(--ink-dim); font-size: 13px; margin-top: 6px; line-height: 1.45; }
+  .velo-scope { display: flex; gap: 10px; justify-content: center; margin: 16px 0 6px; flex-wrap: wrap; }
+  .velo-scope-btn.on { border-color: var(--accent); background: rgba(91,157,255,.14); color: var(--ink); }
+  .velo-zen { display: block; margin: 12px 0; color: var(--ink-dim); font-size: 13px; }
 
   .flash {
     background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
@@ -297,6 +327,7 @@ window.MathJax = {
     <button class="tab" data-mode="test">Quiz</button>
     <button class="tab" data-mode="exam">Exam</button>
     <button class="tab" data-mode="review">Review <span class="due-badge" id="dueBadge"></span></button>
+    <button class="tab" data-mode="velocity">Velocity ⚡</button>
   </div>
   <div class="search">
     <input id="searchBox" type="text" placeholder="Search any concept…" autocomplete="off">
@@ -782,6 +813,7 @@ function render(){
   else if(mode==='explore') renderExplore(v);
   else if(mode==='test') renderTest(v);
   else if(mode==='exam') renderExam(v);
+  else if(mode==='velocity') renderVelocity(v);
   else renderReview(v);
 }
 
@@ -1237,6 +1269,164 @@ document.addEventListener('keydown', e=>{
   else if(reviewState.shown){ const map={'1':'again','2':'hard','3':'good','4':'easy'}; if(map[e.key]){ e.preventDefault(); rvGradeAdvance(map[e.key], v); } }
 });
 
+/* ============================================================================
+   VELOCITY — evidence-based rapid-recall arcade (retrieval practice + SRS).
+   Grounded in the deep-research brief: competitive SAME-TOPIC distractors (the #1
+   lever for transfer), a gentle speed bonus that NEVER gates correctness, every
+   miss instantly shows the answer (halves misinformation uptake), difficulty +
+   timer adapt to each card's SRS mastery, the queue rides the SM-2/Leitner
+   scheduler (spaced; missed cards re-queued, never re-shown back-to-back), and a
+   Zen mode drops the timer/lives for pure retrieval practice.
+   ============================================================================ */
+let velo=null, veloTimer=null;
+const VELO_BASE=100, VELO_SPEED_MAX=60, VELO_HEARTS=3;
+
+function veloPool(scope){
+  if(scope==='weak'){ const st=srsLoad(), now=Date.now();
+    const due=CARDS.filter(c=>{ const s=st[cardId(c)]; return s && s.due<=now; });
+    return due.length>=10 ? due : CARDS; }                       // fall back if too few due
+  if(scope && scope.slice(0,5)==='deck:'){ const d=DECKS.find(x=>x.id===scope.slice(5)); const ts=new Set(d?(d.topics||[]):[]);
+    return CARDS.filter(c=>ts.has(c.sec)); }
+  return CARDS;
+}
+function veloBox(c){ const s=srsLoad()[cardId(c)]; return s?s.box:0; }            // 0..6 mastery
+function veloBudget(q){ if(velo&&velo.zen) return Infinity; return Math.max(6, Math.min(16, Math.round(4 + (q.prompt.length/18) + (6-q.box)))); }
+function veloBuildQueue(pool){ const st=srsLoad(), now=Date.now(), due=[], rest=[];
+  pool.forEach(c=>{ const s=st[cardId(c)]; if(s&&s.due<=now) due.push({c,d:s.due}); else rest.push(c); });
+  due.sort((a,b)=>a.d-b.d);
+  return due.map(x=>x.c).concat(shuffle(rest)); }                // due-first, then shuffled rest (spacing rides SRS)
+// distractors: prefer SAME TOPIC (most confusable) -> same deck -> global, each tier shuffled
+function veloDistractors(correct, sec, n){
+  const deck=TOPIC2DECK[sec], dt=deck?new Set(deck.topics||[]):new Set();
+  const t1=[],t2=[],t3=[], seen=new Set([correct.toLowerCase()]);
+  for(const x of CARDS){ const f=x.front, k=f.toLowerCase(); if(seen.has(k)) continue; seen.add(k);
+    if(x.sec===sec) t1.push(f); else if(dt.has(x.sec)) t2.push(f); else t3.push(f); }
+  return shuffle(t1).concat(shuffle(t2)).concat(shuffle(t3)).slice(0,n);
+}
+function veloQuestion(c){
+  const correct=c.front, box=veloBox(c), nOpts = box>=4?4 : box>=2?3 : 2;   // adaptive: harder when mastered
+  const options=shuffle([correct].concat(veloDistractors(correct,c.sec,nOpts-1)));
+  let sent=firstSentence(stripHtml(c.back));
+  try{ const r=new RegExp(stripHtml(correct).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'); sent=sent.replace(r,'_____'); }catch(e){}
+  return { card:c, prompt:sent, options, answer:correct, box };
+}
+
+function renderVelocity(v){
+  if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
+  if(!velo){                                                     // ---- landing ----
+    const decksWithCards = DECKS.filter(d=>(d.topics||[]).some(t=>CARDS.some(c=>c.sec===t)));
+    const due = srsDueCount();
+    v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+      +'<div class="qtext">Velocity ⚡</div>'
+      +'<p class="rv-sub">Read the definition, tap the concept. Fast + right builds a streak; every miss teaches. It rides your spaced-repetition queue — so playing is real review.</p>'
+      +'<div class="velo-scope">'
+      +  '<button class="btn velo-scope-btn on" data-scope="weak">Weak spots'+(due>0?' · '+due+' due':'')+'</button>'
+      +  '<button class="btn velo-scope-btn" data-scope="all">All decks · '+CARDS.length+'</button>'
+      +'</div>'
+      +'<select id="veloDeck" class="bp-select"><option value="">— or drill one deck —</option>'
+      +  decksWithCards.map(d=>'<option value="deck:'+d.id+'">'+d.name+' ('+CARDS.filter(c=>(d.topics||[]).indexOf(c.sec)>=0).length+')</option>').join('')
+      +'</select>'
+      +'<label class="velo-zen"><input type="checkbox" id="veloZen"> Zen mode — no timer, no lives (pure practice)</label>'
+      +'<button class="btn primary" id="veloStart">Start ⚡</button>'
+      +'</div></div>';
+    let scope='weak';
+    const btns=[].slice.call(v.querySelectorAll('.velo-scope-btn'));
+    btns.forEach(b=> b.onclick=()=>{ btns.forEach(x=>x.classList.remove('on')); b.classList.add('on'); scope=b.dataset.scope; v.querySelector('#veloDeck').value=''; });
+    v.querySelector('#veloDeck').onchange=e=>{ if(e.target.value){ scope=e.target.value; btns.forEach(x=>x.classList.remove('on')); } else { scope='weak'; btns[0].classList.add('on'); } };
+    v.querySelector('#veloStart').onclick=()=>{
+      const zen=v.querySelector('#veloZen').checked;
+      const queue=veloBuildQueue(veloPool(scope));
+      if(!queue.length) return;
+      velo={ scope, zen, queue, pos:0, score:0, streak:0, best:0, hearts: zen?Infinity:VELO_HEARTS, correct:0, answered:0, missed:0, q:null, locked:false, over:false };
+      renderVelocity(v);
+    };
+    return;
+  }
+  if(velo.over || velo.pos>=velo.queue.length) return renderVeloDone(v);
+  const c=velo.queue[velo.pos];
+  const q=(velo.q && velo.q.card===c) ? velo.q : (velo.q=veloQuestion(c));
+  const budget=veloBudget(q);
+  velo.locked=false;
+  const heartsHtml = velo.zen ? '<span class="velo-zen-tag">zen</span>'
+    : '<span class="hh">'+'♥'.repeat(Math.max(0,velo.hearts))+'</span><span class="hh-off">'+'♥'.repeat(Math.max(0,VELO_HEARTS-velo.hearts))+'</span>';
+  v.innerHTML='<div class="velo-wrap">'
+    +'<div class="velo-hud"><span class="velo-score" id="veloScore">'+velo.score+'</span>'
+    +  '<span class="velo-streak'+(velo.streak>=3?' hot':'')+'">'+(velo.streak>0?'🔥 '+velo.streak:'')+'</span>'
+    +  '<span class="velo-hearts">'+heartsHtml+'</span></div>'
+    +(velo.zen?'':'<div class="velo-timebar"><div class="velo-timefill" id="veloTime"></div></div>')
+    +'<div class="velo-prompt">'+q.prompt+'</div>'
+    +'<div class="velo-tiles" id="veloTiles">'
+    +  q.options.map((o,i)=>'<button class="velo-tile" data-i="'+i+'"><span class="velo-key">'+(i+1)+'</span>'+o+'</button>').join('')
+    +'</div>'
+    +'<div class="velo-feedback" id="veloFb"></div>'
+    +'<div style="text-align:center;margin-top:10px"><button class="btn" id="veloQuit">End game</button></div>'
+    +'</div>';
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
+  v.querySelectorAll('.velo-tile').forEach(b=> b.onclick=()=> veloAnswer(+b.dataset.i, v, q, budget));
+  v.querySelector('#veloQuit').onclick=()=>{ velo.over=true; renderVelocity(v); };
+  if(!velo.zen){
+    const deadline=Date.now()+budget*1000; q._deadline=deadline;
+    veloTimer=setInterval(()=>{
+      if(mode!=='velocity'){ clearInterval(veloTimer); veloTimer=null; return; }
+      if(!velo || velo.locked) return;
+      const rem=(deadline-Date.now())/1000, frac=Math.max(0,rem/budget);
+      const el=document.getElementById('veloTime'); if(el){ el.style.width=(frac*100)+'%'; el.style.background = frac<0.25?'var(--bad)':frac<0.5?'var(--warn)':'var(--good)'; }
+      if(rem<=0) veloAnswer(-1, v, q, budget);
+    },50);
+  }
+}
+
+function veloAnswer(idx, v, q, budget){
+  if(!velo || velo.locked) return; velo.locked=true;
+  if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
+  velo.answered++;
+  const tiles=v.querySelectorAll('.velo-tile');
+  const correctIdx=q.options.indexOf(q.answer);
+  const isCorrect = idx>=0 && q.options[idx]===q.answer;
+  tiles.forEach((t,i)=>{ t.disabled=true; if(i===correctIdx) t.classList.add('correct'); else if(i===idx) t.classList.add('wrong'); });
+  const fb=document.getElementById('veloFb');
+  if(isCorrect){
+    const rem = velo.zen?0 : Math.max(0,(q._deadline-Date.now())/1000);
+    const frac = (velo.zen||!budget||budget===Infinity)?0 : Math.max(0,Math.min(1,rem/budget));
+    velo.streak++; velo.best=Math.max(velo.best,velo.streak);
+    const mult = 1 + Math.min(velo.streak-1,9)*0.1;             // gentle streak multiplier, accuracy-led
+    const speed = Math.round(VELO_SPEED_MAX*frac);              // small speed bonus ON TOP of correctness
+    const pts = Math.round((VELO_BASE+speed)*mult);
+    velo.score+=pts; velo.correct++;
+    srsGrade(q.card,'good'); updateDueBadge();                  // successful retrieval -> advance in SRS
+    if(fb) fb.innerHTML='<div class="velo-fb-ok">✓ +'+pts+(speed>0?'  <span class="velo-spd">SPEEDY +'+speed+'</span>':'')+(mult>1?'  <span class="velo-mult">×'+mult.toFixed(1)+'</span>':'')+'</div>';
+    setTimeout(()=>{ velo.pos++; renderVelocity(v); }, 600);
+  } else {
+    velo.streak=0; if(!velo.zen) velo.hearts--; velo.missed++;
+    srsGrade(q.card,'again'); updateDueBadge();                 // miss -> reset + resurfaces soon
+    const at=Math.min(velo.queue.length, velo.pos+6); velo.queue.splice(at,0,q.card);  // re-queue (continued testing)
+    const why=firstSentence(stripHtml(q.card.back));
+    if(fb) fb.innerHTML='<div class="velo-fb-no">'+(idx<0?'⏱ Time — ':'✗ ')+'Answer: <b>'+q.answer+'</b><div class="velo-why">'+why+'</div></div>';
+    const over = !velo.zen && velo.hearts<=0;
+    setTimeout(()=>{ velo.pos++; if(over) velo.over=true; renderVelocity(v); }, 1900);
+  }
+}
+
+function renderVeloDone(v){
+  if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
+  const acc = velo.answered? Math.round(velo.correct/velo.answered*100):0;
+  const reason = (!velo.zen && velo.hearts<=0) ? 'Out of lives' : 'Round complete';
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
+    +'<div class="qtext">'+reason+'</div>'
+    +'<div style="font-size:46px;font-weight:800;color:var(--accent)">'+velo.score+'</div>'
+    +'<div class="readout" style="text-align:left;margin-top:14px">'
+    +  '<div class="ro"><div class="k">Accuracy</div><div class="v">'+acc+'% · '+velo.correct+'/'+velo.answered+'</div></div>'
+    +  '<div class="ro"><div class="k">Best streak</div><div class="v">🔥 '+velo.best+'</div></div>'
+    +  '<div class="ro"><div class="k">Concepts advanced</div><div class="v" style="color:var(--good)">'+velo.correct+'</div></div>'
+    +  '<div class="ro"><div class="k">Re-queued to review</div><div class="v" style="color:#ff9f43">'+velo.missed+'</div></div>'
+    +'</div>'
+    +'<p class="rv-sub" style="margin-top:14px">Every answer fed your spaced-repetition schedule — misses come back sooner, hits get spaced out. Real progress, not just points.</p>'
+    +'<div class="nav-row"><button class="btn" id="veloAgain">Play again</button><button class="btn primary" id="veloReview">Go to Review</button></div>'
+    +'</div></div>';
+  v.querySelector('#veloAgain').onclick=()=>{ velo=null; renderVelocity(v); };
+  v.querySelector('#veloReview').onclick=()=>{ velo=null; setMode('review'); };
+}
+
 /* Study / Quiz / Exam keyboard (Review keeps its own handler above; mutually mode-gated). */
 document.addEventListener('keydown', e=>{
   if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;   // don't fire while typing/selecting
@@ -1255,6 +1445,8 @@ document.addEventListener('keydown', e=>{
     if(/^[1-4]$/.test(e.key)){ const b=v.querySelector('.choice[data-i="'+(+e.key-1)+'"]'); if(b){ e.preventDefault(); b.click(); } }
     else if(e.key==='Enter'){ const nx=document.getElementById('examNext'); if(nx && !nx.disabled){ e.preventDefault(); nx.click(); } }
     else if(e.key==='s'||e.key==='S'){ e.preventDefault(); const b=document.getElementById('examSkip'); if(b) b.click(); }
+  } else if(mode==='velocity' && velo && !velo.over && !velo.locked){
+    if(/^[1-4]$/.test(e.key)){ const b=v.querySelector('.velo-tile[data-i="'+(+e.key-1)+'"]'); if(b && !b.disabled){ e.preventDefault(); b.click(); } }
   }
 });
 
