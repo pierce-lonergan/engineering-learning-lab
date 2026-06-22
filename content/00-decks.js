@@ -7,7 +7,7 @@
 DECKS_DATA.push(
   { id:"foundations", name:"Foundations — CS & System Design",      color:"#7c98c8", topics:["FND-BIGO","FND-DS","FND-ALGO","FND-SYS","FND-CAP","FND-NET","FND-CONC","FND-HASH","FND-CACHE","FND-LB","FND-RL","FND-API"] },
   { id:"streaming",   name:"Distributed Systems & Streaming",        color:"#5fb0a8", topics:["MSG","DELIV","DSS-KAFKA","DSS-PART","DSS-CONSUMER","DSS-PROC","DSS-TIME","DSS-EOS","DSS-CONSENSUS","DSS-COORD","DSS-CLOCK","DSS-TXN","DSS-SCALE"] },
-  { id:"architecture",name:"Software Architecture & Design",          color:"#8b7cff", topics:["EDA"] },
+  { id:"architecture",name:"Software Architecture & Design",          color:"#8b7cff", topics:["EDA","ARCH-PRINCIPLES","ARCH-HEX","ARCH-DDD","ARCH-MICRO","ARCH-INTEG","ARCH-RESIL","ARCH-PATTERNS","ARCH-EVENTS","ARCH-CQRS","ARCH-API","ARCH-SCALE","ARCH-TRADEOFFS"] },
   { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:["DB-ACID","DB-ISO","DB-MVCC","DB-STORAGE","DB-INDEX","DB-QUERY","DB-REPL","DB-SHARD","DB-NOSQL","DB-WIDECOL","DB-NEWSQL","DB-MODELING"] },
   { id:"jvm",         name:"Java & the JVM",                          color:"#e07a5c", topics:["JVM-MEM","JVM-GC","JVM-JMM","JVM-CONC","JVM-COLLECT","JVM-LOOM","JVM-JIT","JVM-CLASS","JVM-LANG","JVM-MODERN","JVM-PERF","JVM-IO"] },
   { id:"spark",       name:"Big Data Processing — Apache Spark",      color:"#f0a866", topics:["SPARK-ARCH","SPARK-RDD","SPARK-DF","SPARK-CATALYST","SPARK-SHUFFLE","SPARK-PART","SPARK-SKEW","SPARK-JOINS","SPARK-MEMORY","SPARK-AQE","SPARK-STREAM","SPARK-TUNE"] },
@@ -115,5 +115,18 @@ Object.assign(SECTIONS_DATA, {
   "LAKE-ACID":      "Time Travel, Versioning & ACID",
   "LAKE-STREAM":    "Streaming & Incremental Tables",
   "LAKE-CATALOG":   "Catalogs & Metadata Governance",
-  "LAKE-ENGINE":    "Query Engines & Federation"
+  "LAKE-ENGINE":    "Query Engines & Federation",
+  // Software Architecture & Design
+  "ARCH-PRINCIPLES": "Design Principles (SOLID & Coupling)",
+  "ARCH-HEX":        "Hexagonal & Clean Architecture",
+  "ARCH-DDD":        "Domain-Driven Design",
+  "ARCH-MICRO":      "Microservices vs Monolith",
+  "ARCH-INTEG":      "Service Communication & Integration",
+  "ARCH-RESIL":      "Resilience & Fault Tolerance",
+  "ARCH-PATTERNS":   "Core Design Patterns",
+  "ARCH-EVENTS":     "Event-Driven & Messaging Patterns",
+  "ARCH-CQRS":       "CQRS & Event Sourcing",
+  "ARCH-API":        "API & Contract Design",
+  "ARCH-SCALE":      "Scalability & System Design",
+  "ARCH-TRADEOFFS":  "Architecture Tradeoffs & ADRs"
 });
