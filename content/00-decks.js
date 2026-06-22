@@ -14,7 +14,7 @@ DECKS_DATA.push(
   { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:[] },
   { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:["ML-EMBED","ML-ANN","ML-RAG","ML-RERANK","ML-SEARCH","ML-EVALIR","ML-TRAIN","ML-EVAL","ML-FEATURE","ML-XFMR","ML-MLOPS","ML-PROMPT"] },
   { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION","LAKE-FORMATS","LAKE-ICEBERG","LAKE-PARQUET","LAKE-LAYOUT","LAKE-OLAP","LAKE-WAREHOUSE","LAKE-ETL","LAKE-OPT","LAKE-ACID","LAKE-STREAM","LAKE-CATALOG","LAKE-ENGINE"] },
-  { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:[] },
+  { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:["CLOUD-MODELS","CLOUD-COMPUTE","CLOUD-S3","CLOUD-NETWORK","CLOUD-IAM","CLOUD-DATA","CLOUD-STREAM","CLOUD-MSG","CLOUD-DB","CLOUD-IAC","CLOUD-OPS","CLOUD-WELLARCH"] },
   { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:[] },
   { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:[] }
 );
@@ -128,5 +128,18 @@ Object.assign(SECTIONS_DATA, {
   "ARCH-CQRS":       "CQRS & Event Sourcing",
   "ARCH-API":        "API & Contract Design",
   "ARCH-SCALE":      "Scalability & System Design",
-  "ARCH-TRADEOFFS":  "Architecture Tradeoffs & ADRs"
+  "ARCH-TRADEOFFS":  "Architecture Tradeoffs & ADRs",
+  // Cloud & Infrastructure (AWS)
+  "CLOUD-MODELS":    "Cloud Fundamentals & Service Models",
+  "CLOUD-COMPUTE":   "Compute (EC2, Lambda, Containers)",
+  "CLOUD-S3":        "S3 & Object Storage",
+  "CLOUD-NETWORK":   "Networking (VPC, ELB, Route 53)",
+  "CLOUD-IAM":       "IAM & Security",
+  "CLOUD-DATA":      "Data Services (Glue, EMR, Athena)",
+  "CLOUD-STREAM":    "Streaming (Kinesis, MSK)",
+  "CLOUD-MSG":       "Messaging (SQS, SNS, EventBridge)",
+  "CLOUD-DB":        "Managed Databases (RDS, DynamoDB, Aurora)",
+  "CLOUD-IAC":       "Infrastructure as Code & CI/CD",
+  "CLOUD-OPS":       "Observability & Operations (CloudWatch/X-Ray)",
+  "CLOUD-WELLARCH":  "Cost & the Well-Architected Framework"
 });
