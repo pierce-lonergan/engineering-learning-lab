@@ -98,20 +98,22 @@ window.MathJax = {
   .bp-blurb, .bp-pool { font-size: 12px; color: var(--ink-dim); margin: 4px 0; }
   #lenpick button.off { opacity: .4; cursor: not-allowed; }
   /* Velocity arcade */
-  .velo-wrap { max-width: 560px; margin: 0 auto; }
-  .velo-hud { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-weight: 800; min-height: 26px; }
-  .velo-score { font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums; display: inline-block; }
-  .velo-streak { font-size: 15px; color: var(--ink-dim); transition: color .2s; }
+  .velo-wrap { max-width: 880px; margin: 0 auto; }
+  .velo-hud { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; font-weight: 800; min-height: 30px; }
+  .velo-score { font-size: 28px; color: var(--accent); font-variant-numeric: tabular-nums; display: inline-block; }
+  .velo-streak { font-size: 18px; color: var(--ink-dim); transition: color .2s; }
   .velo-streak.hot { color: #ff7a45; }
-  .velo-hearts { font-size: 18px; letter-spacing: 2px; }
+  .velo-hearts { font-size: 22px; letter-spacing: 3px; }
   .velo-hearts .hh { color: var(--bad); }
   .velo-hearts .hh-off { color: var(--line); }
   .velo-zen-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent2); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; font-weight: 700; }
   .velo-timebar { height: 6px; background: var(--panel2); border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
   .velo-timefill { height: 100%; width: 100%; background: var(--good); border-radius: 6px; transition: width .06s linear, background .3s; }
-  .velo-prompt { font-size: 18.5px; line-height: 1.5; text-align: center; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 20px; margin-bottom: 16px; min-height: 84px; display: flex; align-items: center; justify-content: center; }
-  .velo-tiles { display: grid; gap: 10px; }
-  .velo-tile { position: relative; text-align: left; padding: 15px 16px 15px 48px; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; transition: transform .06s, border-color .15s, background .15s; }
+  .velo-prompt { font-size: 23px; line-height: 1.5; text-align: center; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 30px 28px; margin-bottom: 18px; min-height: 108px; display: flex; align-items: center; justify-content: center; }
+  .velo-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .velo-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  @media (max-width: 600px) { .velo-tiles { grid-template-columns: 1fr; } }
+  .velo-tile { position: relative; text-align: left; padding: 18px 18px 18px 52px; font-size: 16px; font-weight: 600; min-height: 56px; display: flex; align-items: center; color: var(--ink); background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; transition: transform .06s, border-color .15s, background .15s; }
   .velo-tile:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
   .velo-tile:disabled { cursor: default; }
   .velo-tile.correct { border-color: var(--good); background: rgba(70,211,154,.15); color: #fff; }
@@ -128,15 +130,15 @@ window.MathJax = {
   .velo-scope-btn.on { border-color: var(--accent); background: rgba(91,157,255,.14); color: var(--ink); }
   .velo-zen { display: block; margin: 12px 0; color: var(--ink-dim); font-size: 13px; }
   /* Velocity — the rocket "sky" stage + juice */
-  .velo-sky { position: relative; height: 116px; margin-bottom: 12px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line);
+  .velo-sky { position: relative; height: 240px; margin-bottom: 14px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
     background: radial-gradient(120% 80% at 50% 120%, #1a2c4e 0%, #0c1730 55%, #080f20 100%); }
   .velo-stars { position: absolute; inset: 0; }
   .velo-star { position: absolute; top: 0; border-radius: 50%; background: #cfe0ff; animation: veloFall linear infinite; }
-  @keyframes veloFall { from { transform: translateY(-14px); } to { transform: translateY(130px); } }
-  .velo-rocket { position: absolute; left: 50%; bottom: 9px; margin-left: -17px; transition: transform .5s cubic-bezier(.34,1.45,.5,1); will-change: transform; }
+  @keyframes veloFall { from { transform: translateY(-16px); } to { transform: translateY(258px); } }
+  .velo-rocket { position: absolute; left: 50%; bottom: 12px; margin-left: -21px; transition: transform .5s cubic-bezier(.34,1.45,.5,1); will-change: transform; }
   .velo-rocket-inner { animation: veloBob 2.6s ease-in-out infinite; transform-origin: 50% 35%; }
-  @keyframes veloBob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
-  .velo-flame { position: absolute; left: 50%; bottom: 1px; margin-left: -8px; width: 16px; height: 30px;
+  @keyframes veloBob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-4px) rotate(1.5deg); } }
+  .velo-flame { position: absolute; left: 50%; bottom: 1px; margin-left: -9px; width: 18px; height: 34px;
     background: linear-gradient(to top, transparent, #ff7a45 25%, #ffd166 65%, #fff 95%);
     clip-path: polygon(50% 100%, 8% 0, 92% 0); transform-origin: top center; transform: scaleY(.3); opacity: .65; filter: blur(.5px);
     transition: transform .15s, opacity .15s; }
@@ -156,9 +158,9 @@ window.MathJax = {
   .velo-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; margin: -3px 0 0 -3px;
     animation: veloPBurst .6s ease-out forwards; }
   @keyframes veloPBurst { from { transform: translate(0,0) scale(1); opacity: 1; } to { transform: translate(var(--tx,0), var(--ty,0)) scale(0); opacity: 0; } }
-  .velo-float { position: absolute; transform: translate(-50%,0); font-weight: 800; font-size: 18px; color: var(--good);
-    text-shadow: 0 1px 5px rgba(0,0,0,.6); pointer-events: none; animation: veloFloat .9s ease-out forwards; }
-  @keyframes veloFloat { from { transform: translate(-50%,0); opacity: 1; } to { transform: translate(-50%,-48px); opacity: 0; } }
+  .velo-float { position: absolute; transform: translate(-50%,0); font-weight: 800; font-size: 22px; color: var(--good);
+    text-shadow: 0 1px 6px rgba(0,0,0,.6); pointer-events: none; animation: veloFloat 1s ease-out forwards; }
+  @keyframes veloFloat { from { transform: translate(-50%,0); opacity: 1; } to { transform: translate(-50%,-64px); opacity: 0; } }
   .velo-milestone { position: absolute; left: 50%; top: 13px; transform: translateX(-50%); font-weight: 800; font-size: 15px; color: #ffd166;
     text-shadow: 0 1px 7px rgba(0,0,0,.7); white-space: nowrap; pointer-events: none; animation: veloMile 1.2s ease-out forwards; }
   @keyframes veloMile { 0% { transform: translateX(-50%) scale(.5); opacity: 0; } 22% { transform: translateX(-50%) scale(1.12); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 0; } }
@@ -181,7 +183,7 @@ window.MathJax = {
   .velo-sky.orbitflash::after { content: ""; position: absolute; inset: 0; pointer-events: none; animation: veloFlash .7s ease-out;
     background: radial-gradient(circle at 50% 60%, rgba(255,255,255,.6), rgba(91,157,255,.32) 40%, transparent 76%); }
   .velo-rocket.launch { animation: veloLaunch 1.05s cubic-bezier(.4,0,.2,1); }
-  @keyframes veloLaunch { 0% { transform: translateY(-58px); } 28% { transform: translateY(-74px) scale(1.06); } 60% { transform: translateY(-38px); } 100% { transform: translateY(-58px); } }
+  @keyframes veloLaunch { 0% { transform: translateY(-150px); } 28% { transform: translateY(-178px) scale(1.07); } 60% { transform: translateY(-110px); } 100% { transform: translateY(-150px); } }
 
   .flash {
     background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
@@ -1367,13 +1369,13 @@ function veloQuestion(c){
 }
 
 /* ---- Velocity visuals: rocket, starfield + dopamine juice ---- */
-const VELO_ROCKET_SVG='<svg viewBox="0 0 40 70" width="34" height="60" aria-hidden="true">'
+const VELO_ROCKET_SVG='<svg viewBox="0 0 40 70" width="44" height="76" aria-hidden="true">'
   +'<defs><linearGradient id="vrbody" x1="0" x2="1"><stop offset="0" stop-color="#aebfdd"/><stop offset=".5" stop-color="#eef3fb"/><stop offset="1" stop-color="#aebfdd"/></linearGradient></defs>'
   +'<path d="M9 41 L1 56 L9 50 Z" fill="#d56f7a"/><path d="M31 41 L39 56 L31 50 Z" fill="#d56f7a"/>'
   +'<path d="M20 2 C29 11 31 24 31 36 L31 50 L9 50 L9 36 C9 24 11 11 20 2 Z" fill="url(#vrbody)" stroke="#7c8cae" stroke-width="1"/>'
   +'<circle cx="20" cy="26" r="6.5" fill="#5b9dff" stroke="#22304e" stroke-width="1.6"/><circle cx="18" cy="24" r="2" fill="#cfe6ff"/>'
   +'<path d="M13.5 50 L26.5 50 L24 57 L16 57 Z" fill="#8d9bbd"/></svg>';
-function veloAltitude(s){ return -(Math.min(s,10)/10)*58; }
+function veloAltitude(s){ return -(Math.min(s,10)/10)*150; }
 function veloStarfield(el){ if(!el) return; let h='';
   for(let i=0;i<26;i++){ const x=(Math.random()*100).toFixed(1), sz=(Math.random()*1.6+0.6).toFixed(1), dur=(Math.random()*5+4).toFixed(1), delay=(-Math.random()*9).toFixed(1), op=(Math.random()*0.5+0.25).toFixed(2);
     h+='<i class="velo-star" style="left:'+x+'%;width:'+sz+'px;height:'+sz+'px;opacity:'+op+';animation-duration:'+dur+'s;animation-delay:'+delay+'s"></i>'; }
