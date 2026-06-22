@@ -100,7 +100,7 @@ window.MathJax = {
   /* Velocity arcade */
   .velo-wrap { max-width: 560px; margin: 0 auto; }
   .velo-hud { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-weight: 800; min-height: 26px; }
-  .velo-score { font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .velo-score { font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums; display: inline-block; }
   .velo-streak { font-size: 15px; color: var(--ink-dim); transition: color .2s; }
   .velo-streak.hot { color: #ff7a45; }
   .velo-hearts { font-size: 18px; letter-spacing: 2px; }
@@ -127,6 +127,43 @@ window.MathJax = {
   .velo-scope { display: flex; gap: 10px; justify-content: center; margin: 16px 0 6px; flex-wrap: wrap; }
   .velo-scope-btn.on { border-color: var(--accent); background: rgba(91,157,255,.14); color: var(--ink); }
   .velo-zen { display: block; margin: 12px 0; color: var(--ink-dim); font-size: 13px; }
+  /* Velocity — the rocket "sky" stage + juice */
+  .velo-sky { position: relative; height: 116px; margin-bottom: 12px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line);
+    background: radial-gradient(120% 80% at 50% 120%, #1a2c4e 0%, #0c1730 55%, #080f20 100%); }
+  .velo-stars { position: absolute; inset: 0; }
+  .velo-star { position: absolute; top: 0; border-radius: 50%; background: #cfe0ff; animation: veloFall linear infinite; }
+  @keyframes veloFall { from { transform: translateY(-14px); } to { transform: translateY(130px); } }
+  .velo-rocket { position: absolute; left: 50%; bottom: 9px; margin-left: -17px; transition: transform .5s cubic-bezier(.34,1.45,.5,1); will-change: transform; }
+  .velo-rocket-inner { animation: veloBob 2.6s ease-in-out infinite; transform-origin: 50% 35%; }
+  @keyframes veloBob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
+  .velo-flame { position: absolute; left: 50%; bottom: 1px; margin-left: -8px; width: 16px; height: 30px;
+    background: linear-gradient(to top, transparent, #ff7a45 25%, #ffd166 65%, #fff 95%);
+    clip-path: polygon(50% 100%, 8% 0, 92% 0); transform-origin: top center; transform: scaleY(.3); opacity: .65; filter: blur(.5px);
+    transition: transform .15s, opacity .15s; }
+  .velo-rocket-inner.boost { animation: veloThrust .42s ease-out; }
+  .velo-rocket-inner.boost .velo-flame { transform: scaleY(1.2); opacity: 1; animation: veloFlick .08s infinite alternate; }
+  @keyframes veloThrust { 0% { transform: translateY(0) scale(1); } 32% { transform: translateY(-7px) scale(1.07); } 100% { transform: translateY(0) scale(1); } }
+  @keyframes veloFlick { from { transform: scaleY(1.0) scaleX(.82); } to { transform: scaleY(1.4) scaleX(1.12); } }
+  .velo-rocket-inner.stall { animation: veloShake .44s; }
+  @keyframes veloShake { 0%,100% { transform: translateX(0) rotate(0); } 18% { transform: translateX(-5px) rotate(-7deg); } 38% { transform: translateX(5px) rotate(6deg); } 58% { transform: translateX(-4px) rotate(-3deg); } 78% { transform: translateX(3px) rotate(2deg); } }
+  .velo-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(circle at 50% 62%, rgba(255,90,90,.42), transparent 70%); }
+  .velo-sky.flash .velo-flash { animation: veloFlash .44s ease-out; }
+  @keyframes veloFlash { 0% { opacity: 1; } 100% { opacity: 0; } }
+  .velo-streakline { position: absolute; top: -22%; width: 2px; height: 26px; border-radius: 2px; pointer-events: none;
+    background: linear-gradient(transparent, #bcd2ff); opacity: .85; animation: veloStreak .42s ease-in forwards; }
+  @keyframes veloStreak { from { transform: translateY(-10px); opacity: .9; } to { transform: translateY(150px); opacity: 0; } }
+  .velo-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; margin: -3px 0 0 -3px;
+    animation: veloPBurst .6s ease-out forwards; }
+  @keyframes veloPBurst { from { transform: translate(0,0) scale(1); opacity: 1; } to { transform: translate(var(--tx,0), var(--ty,0)) scale(0); opacity: 0; } }
+  .velo-float { position: absolute; transform: translate(-50%,0); font-weight: 800; font-size: 18px; color: var(--good);
+    text-shadow: 0 1px 5px rgba(0,0,0,.6); pointer-events: none; animation: veloFloat .9s ease-out forwards; }
+  @keyframes veloFloat { from { transform: translate(-50%,0); opacity: 1; } to { transform: translate(-50%,-48px); opacity: 0; } }
+  .velo-milestone { position: absolute; left: 50%; top: 13px; transform: translateX(-50%); font-weight: 800; font-size: 15px; color: #ffd166;
+    text-shadow: 0 1px 7px rgba(0,0,0,.7); white-space: nowrap; pointer-events: none; animation: veloMile 1.2s ease-out forwards; }
+  @keyframes veloMile { 0% { transform: translateX(-50%) scale(.5); opacity: 0; } 22% { transform: translateX(-50%) scale(1.12); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateX(-50%) scale(1); opacity: 0; } }
+  .velo-score.pop { animation: veloPop .32s; }
+  @keyframes veloPop { 0% { transform: scale(1); } 40% { transform: scale(1.42); color: #fff; } 100% { transform: scale(1); } }
 
   .flash {
     background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
@@ -1311,6 +1348,31 @@ function veloQuestion(c){
   return { card:c, prompt:sent, options, answer:correct, box };
 }
 
+/* ---- Velocity visuals: rocket, starfield + dopamine juice ---- */
+const VELO_ROCKET_SVG='<svg viewBox="0 0 40 70" width="34" height="60" aria-hidden="true">'
+  +'<defs><linearGradient id="vrbody" x1="0" x2="1"><stop offset="0" stop-color="#aebfdd"/><stop offset=".5" stop-color="#eef3fb"/><stop offset="1" stop-color="#aebfdd"/></linearGradient></defs>'
+  +'<path d="M9 41 L1 56 L9 50 Z" fill="#d56f7a"/><path d="M31 41 L39 56 L31 50 Z" fill="#d56f7a"/>'
+  +'<path d="M20 2 C29 11 31 24 31 36 L31 50 L9 50 L9 36 C9 24 11 11 20 2 Z" fill="url(#vrbody)" stroke="#7c8cae" stroke-width="1"/>'
+  +'<circle cx="20" cy="26" r="6.5" fill="#5b9dff" stroke="#22304e" stroke-width="1.6"/><circle cx="18" cy="24" r="2" fill="#cfe6ff"/>'
+  +'<path d="M13.5 50 L26.5 50 L24 57 L16 57 Z" fill="#8d9bbd"/></svg>';
+function veloAltitude(s){ return -(Math.min(s,10)/10)*58; }
+function veloStarfield(el){ if(!el) return; let h='';
+  for(let i=0;i<26;i++){ const x=(Math.random()*100).toFixed(1), sz=(Math.random()*1.6+0.6).toFixed(1), dur=(Math.random()*5+4).toFixed(1), delay=(-Math.random()*9).toFixed(1), op=(Math.random()*0.5+0.25).toFixed(2);
+    h+='<i class="velo-star" style="left:'+x+'%;width:'+sz+'px;height:'+sz+'px;opacity:'+op+';animation-duration:'+dur+'s;animation-delay:'+delay+'s"></i>'; }
+  el.innerHTML=h; }
+function veloRocketCenter(sky){ const r=document.getElementById('veloRocket'); if(!r||!sky) return {x:50,y:62}; const sr=sky.getBoundingClientRect(), rr=r.getBoundingClientRect();
+  return { x:(rr.left+rr.width/2-sr.left)/sr.width*100, y:(rr.top+rr.height/2-sr.top)/sr.height*100 }; }
+function veloBurst(sky){ if(!sky) return; const c=veloRocketCenter(sky), cols=['#ffd166','#5b9dff','#46d39a','#ff7a45','#ffffff'];
+  for(let i=0;i<13;i++){ const p=document.createElement('i'); p.className='velo-particle'; const a=Math.random()*Math.PI*2, d=18+Math.random()*42;
+    p.style.setProperty('--tx',(Math.cos(a)*d).toFixed(0)+'px'); p.style.setProperty('--ty',(Math.sin(a)*d).toFixed(0)+'px');
+    p.style.left=c.x+'%'; p.style.top=c.y+'%'; p.style.background=cols[i%cols.length]; sky.appendChild(p); setTimeout(()=>p.remove(),650); } }
+function veloStreakLines(sky){ if(!sky) return; for(let i=0;i<7;i++){ const l=document.createElement('i'); l.className='velo-streakline';
+  l.style.left=(8+Math.random()*84).toFixed(0)+'%'; l.style.animationDelay=(Math.random()*0.09).toFixed(2)+'s'; sky.appendChild(l); setTimeout(()=>l.remove(),520); } }
+function veloFloatTxt(sky, txt){ if(!sky) return; const c=veloRocketCenter(sky); const f=document.createElement('div'); f.className='velo-float'; f.textContent=txt;
+  f.style.left=c.x+'%'; f.style.top=(c.y-6)+'%'; sky.appendChild(f); setTimeout(()=>f.remove(),900); }
+function veloMilestone(sky, s){ if(!sky) return; const m=document.createElement('div'); m.className='velo-milestone';
+  m.textContent = s>=10?'🚀 ORBIT! '+s+' streak':'⚡ BOOST · '+s+' streak'; sky.appendChild(m); setTimeout(()=>m.remove(),1200); }
+
 function renderVelocity(v){
   if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
   if(!velo){                                                     // ---- landing ----
@@ -1353,6 +1415,9 @@ function renderVelocity(v){
     +'<div class="velo-hud"><span class="velo-score" id="veloScore">'+velo.score+'</span>'
     +  '<span class="velo-streak'+(velo.streak>=3?' hot':'')+'">'+(velo.streak>0?'🔥 '+velo.streak:'')+'</span>'
     +  '<span class="velo-hearts">'+heartsHtml+'</span></div>'
+    +'<div class="velo-sky" id="veloSky"><div class="velo-stars" id="veloStars"></div><div class="velo-flash"></div>'
+    +  '<div class="velo-rocket" id="veloRocket" style="transform:translateY('+veloAltitude(velo.streak)+'px)"><div class="velo-rocket-inner" id="veloRocketInner">'+VELO_ROCKET_SVG+'<div class="velo-flame"></div></div></div>'
+    +'</div>'
     +(velo.zen?'':'<div class="velo-timebar"><div class="velo-timefill" id="veloTime"></div></div>')
     +'<div class="velo-prompt">'+q.prompt+'</div>'
     +'<div class="velo-tiles" id="veloTiles">'
@@ -1363,6 +1428,7 @@ function renderVelocity(v){
     +'</div>';
   if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
   v.querySelectorAll('.velo-tile').forEach(b=> b.onclick=()=> veloAnswer(+b.dataset.i, v, q, budget));
+  veloStarfield(document.getElementById('veloStars'));
   v.querySelector('#veloQuit').onclick=()=>{ velo.over=true; renderVelocity(v); };
   if(!velo.zen){
     const deadline=Date.now()+budget*1000; q._deadline=deadline;
@@ -1395,13 +1461,23 @@ function veloAnswer(idx, v, q, budget){
     velo.score+=pts; velo.correct++;
     srsGrade(q.card,'good'); updateDueBadge();                  // successful retrieval -> advance in SRS
     if(fb) fb.innerHTML='<div class="velo-fb-ok">✓ +'+pts+(speed>0?'  <span class="velo-spd">SPEEDY +'+speed+'</span>':'')+(mult>1?'  <span class="velo-mult">×'+mult.toFixed(1)+'</span>':'')+'</div>';
-    setTimeout(()=>{ velo.pos++; renderVelocity(v); }, 600);
+    const sky=document.getElementById('veloSky'), inner=document.getElementById('veloRocketInner'), rk=document.getElementById('veloRocket');
+    if(rk) rk.style.transform='translateY('+veloAltitude(velo.streak)+'px)';           // climb with streak
+    if(inner){ inner.classList.add('boost'); }
+    if(sky){ veloStreakLines(sky); veloBurst(sky); veloFloatTxt(sky,'+'+pts); }
+    const sc=document.getElementById('veloScore'); if(sc){ sc.textContent=velo.score; sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop'); }
+    if(sky && (velo.streak===5||velo.streak===10||velo.streak===15||velo.streak===20)) veloMilestone(sky, velo.streak);
+    setTimeout(()=>{ velo.pos++; renderVelocity(v); }, 750);
   } else {
     velo.streak=0; if(!velo.zen) velo.hearts--; velo.missed++;
     srsGrade(q.card,'again'); updateDueBadge();                 // miss -> reset + resurfaces soon
     const at=Math.min(velo.queue.length, velo.pos+6); velo.queue.splice(at,0,q.card);  // re-queue (continued testing)
     const why=firstSentence(stripHtml(q.card.back));
     if(fb) fb.innerHTML='<div class="velo-fb-no">'+(idx<0?'⏱ Time — ':'✗ ')+'Answer: <b>'+q.answer+'</b><div class="velo-why">'+why+'</div></div>';
+    const skyN=document.getElementById('veloSky'), innerN=document.getElementById('veloRocketInner'), rkN=document.getElementById('veloRocket');
+    if(rkN) rkN.style.transform='translateY(0px)';                                     // streak broke -> fall back to ground
+    if(innerN) innerN.classList.add('stall');
+    if(skyN){ skyN.classList.add('flash'); setTimeout(function(){ if(skyN) skyN.classList.remove('flash'); },420); }
     const over = !velo.zen && velo.hearts<=0;
     setTimeout(()=>{ velo.pos++; if(over) velo.over=true; renderVelocity(v); }, 1900);
   }
