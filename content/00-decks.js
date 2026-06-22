@@ -11,7 +11,7 @@ DECKS_DATA.push(
   { id:"databases",   name:"Databases, Transactions & NoSQL",         color:"#d56f7a", topics:["DB-ACID","DB-ISO","DB-MVCC","DB-STORAGE","DB-INDEX","DB-QUERY","DB-REPL","DB-SHARD","DB-NOSQL","DB-WIDECOL","DB-NEWSQL","DB-MODELING"] },
   { id:"jvm",         name:"Java & the JVM",                          color:"#e07a5c", topics:["JVM-MEM","JVM-GC","JVM-JMM","JVM-CONC","JVM-COLLECT","JVM-LOOM","JVM-JIT","JVM-CLASS","JVM-LANG","JVM-MODERN","JVM-PERF","JVM-IO"] },
   { id:"spark",       name:"Big Data Processing — Apache Spark",      color:"#f0a866", topics:["SPARK-ARCH","SPARK-RDD","SPARK-DF","SPARK-CATALYST","SPARK-SHUFFLE","SPARK-PART","SPARK-SKEW","SPARK-JOINS","SPARK-MEMORY","SPARK-AQE","SPARK-STREAM","SPARK-TUNE"] },
-  { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:[] },
+  { id:"obs",         name:"Observability, Security & Reliability",   color:"#fbbf24", topics:["OBS-PILLARS","OBS-METRICS","OBS-SLO","OBS-ALERTING","OBS-SRE","OBS-INCIDENT","OBS-CHAOS","SEC-AUTHN","SEC-AUTHZ","SEC-CRYPTO","SEC-APPSEC","SEC-THREAT"] },
   { id:"ml",          name:"Applied ML & Information Retrieval",      color:"#46d39a", topics:["ML-EMBED","ML-ANN","ML-RAG","ML-RERANK","ML-SEARCH","ML-EVALIR","ML-TRAIN","ML-EVAL","ML-FEATURE","ML-XFMR","ML-MLOPS","ML-PROMPT"] },
   { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION","LAKE-FORMATS","LAKE-ICEBERG","LAKE-PARQUET","LAKE-LAYOUT","LAKE-OLAP","LAKE-WAREHOUSE","LAKE-ETL","LAKE-OPT","LAKE-ACID","LAKE-STREAM","LAKE-CATALOG","LAKE-ENGINE"] },
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:["CLOUD-MODELS","CLOUD-COMPUTE","CLOUD-S3","CLOUD-NETWORK","CLOUD-IAM","CLOUD-DATA","CLOUD-STREAM","CLOUD-MSG","CLOUD-DB","CLOUD-IAC","CLOUD-OPS","CLOUD-WELLARCH"] },
@@ -141,5 +141,18 @@ Object.assign(SECTIONS_DATA, {
   "CLOUD-DB":        "Managed Databases (RDS, DynamoDB, Aurora)",
   "CLOUD-IAC":       "Infrastructure as Code & CI/CD",
   "CLOUD-OPS":       "Observability & Operations (CloudWatch/X-Ray)",
-  "CLOUD-WELLARCH":  "Cost & the Well-Architected Framework"
+  "CLOUD-WELLARCH":  "Cost & the Well-Architected Framework",
+  // Observability, Security & Reliability
+  "OBS-PILLARS":   "The Three Pillars (Metrics, Logs, Traces)",
+  "OBS-METRICS":   "Metrics & Monitoring Methods",
+  "OBS-SLO":       "SLI, SLO, SLA & Error Budgets",
+  "OBS-ALERTING":  "Alerting & On-Call",
+  "OBS-SRE":       "SRE & Reliability Engineering",
+  "OBS-INCIDENT":  "Incident Response & Postmortems",
+  "OBS-CHAOS":     "Chaos Engineering",
+  "SEC-AUTHN":     "Authentication",
+  "SEC-AUTHZ":     "Authorization & Access Control",
+  "SEC-CRYPTO":    "Cryptography & TLS",
+  "SEC-APPSEC":    "Application Security (OWASP)",
+  "SEC-THREAT":    "Threat Modeling & Secure Design"
 });
