@@ -1446,6 +1446,19 @@ function veloRecallMatch(typed, answer, aliases){ const res={correct:false,close
     if(!near){ const b=Math.max(1,veloWordBudget(cSig)); if(veloLev(tSig,cSig,b+1)<=b+1) near=true; } }
   res.close=near; return res; }
 function veloAliasesFor(card){ if(typeof GLOSSARY!=='object') return []; const want=veloSig(card.front); for(const id in GLOSSARY){ const g=GLOSSARY[id]; if(g&&g.term&&veloSig(g.term)===want) return (g.aliases||[]); } return []; }
+// ---- glossary-anchored recall: "type the term" from a real concept's definition ----
+let _veloGloss=null, _veloSigCard=null;
+function veloGlossPool(scope){ if(_veloGloss && _veloGloss.scope===scope) return _veloGloss.list;
+  let topics=null; if(scope && scope.slice(0,5)==='deck:'){ const d=DECKS.find(x=>x.id===scope.slice(5)); if(d) topics=new Set(d.topics||[]); }
+  const list=[]; for(const id in GLOSSARY){ const g=GLOSSARY[id]; if(!g||!g.eli5||!g.term) continue; if(topics && !topics.has(g.group)) continue;
+    const wc=veloNormalize(g.term).split(' ').filter(Boolean).length, sig=veloSig(g.term); if(sig.length>=2 && sig.length<=28 && wc>=1 && wc<=4) list.push(g); }
+  _veloGloss={scope, list}; return list; }
+function veloGlossCard(term){ if(!_veloSigCard){ _veloSigCard={}; for(const c of CARDS){ const s=veloSig(c.front); if(s && !_veloSigCard[s]) _veloSigCard[s]=c; } } return _veloSigCard[veloSig(term)]||null; }
+function veloGlossQuestion(scope, seen){ const pool=veloGlossPool(scope); if(!pool.length) return null; let g=null;
+  for(let i=0;i<6 && !g;i++){ const cand=pool[Math.floor(Math.random()*pool.length)]; if(!seen || seen.indexOf(cand.term)<0) g=cand; }
+  if(!g) g=pool[Math.floor(Math.random()*pool.length)];
+  let sent=firstSentence(stripHtml(g.eli5)); try{ const r=new RegExp(stripHtml(g.term).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'); sent=sent.replace(r,'_____'); }catch(e){}
+  return { card: veloGlossCard(g.term), gloss:g, prompt:sent, options:[], answer:g.term, box:3, mode:'recall', recallGloss:true, aliases:(g.aliases||[]) }; }
 // ---- HUD live-update helpers ----
 function veloHudCombo(streak, mult){ const mh=document.getElementById('veloMhud'); if(!mh) return; const n=document.getElementById('veloStreakN'), x=document.getElementById('veloMult'), f=document.getElementById('veloMfill');
   if(n) n.textContent=streak; if(x) x.textContent='×'+mult.toFixed(1); mh.dataset.tier = mult>=1.8?2:mult>=1.5?1:0; if(f) f.style.width=(Math.min(streak,10)/10*100)+'%'; mh.classList.remove('bump'); void mh.offsetWidth; mh.classList.add('bump'); }
@@ -1805,7 +1818,10 @@ function renderVelocity(v){
   }
   if(velo.over || velo.pos>=velo.queue.length) return renderVeloDone(v);
   const c=velo.queue[velo.pos];
-  const q=(velo.q && velo.q.card===c) ? velo.q : (velo.q=veloQuestion(c));
+  let q; const recallProb=velo.zen?0.40:0.28;
+  if(!velo._lastWasRecall && velo.answered>=2 && Math.random()<recallProb) q=veloGlossQuestion(velo.scope, velo._glossSeen);   // interstitial "type the term" round
+  if(q){ velo.q=q; velo._lastWasRecall=true; if(q.gloss){ (velo._glossSeen=velo._glossSeen||[]).push(q.gloss.term); if(velo._glossSeen.length>40) velo._glossSeen.shift(); } }
+  else { q=(velo.q && velo.q.card===c && !velo.q.recallGloss) ? velo.q : (velo.q=veloQuestion(c)); velo._lastWasRecall=false; }
   const budget=veloBudget(q);
   velo.locked=false;
   const heartsHtml = velo.zen ? '<span class="velo-zen-tag">zen</span>'
@@ -1871,9 +1887,8 @@ function veloAnswer(idx, v, q, budget){
     const speed = Math.round(VELO_SPEED_MAX*frac);              // small speed bonus ON TOP of correctness
     const pts = Math.round((VELO_BASE+speed)*mult*recallMult);
     velo.score+=pts; velo.correct++; velo.legProgress++;       // a correct retrieval is thrust toward the next planet
-    const oldBox=veloBox(q.card);
-    srsGrade(q.card,'good'); updateDueBadge();                  // successful retrieval -> advance in SRS
-    if(veloBox(q.card)>=3 && oldBox<3) velo.boxedUp++;         // crossed into "known" this session
+    if(q.card){ const oldBox=veloBox(q.card); srsGrade(q.card,'good'); if(veloBox(q.card)>=3 && oldBox<3) velo.boxedUp++; }   // grade the card in SRS (glossary rounds w/o a matched card are bonus practice)
+    updateDueBadge();
     veloHudCombo(velo.streak, mult); veloRouteAdvance();
     veloBuzz(velo.streak%5===0?[20,40,30]:20);
     if(fb) fb.innerHTML='<div class="velo-fb-ok">'+(q.mode==='recall'?'✓ RECALLED ':'✓ ')+'+'+pts+(speed>0?'  <span class="velo-spd">SPEEDY +'+speed+'</span>':'')+(mult>1?'  <span class="velo-mult">×'+mult.toFixed(1)+'</span>':'')+'</div>';
@@ -1886,13 +1901,13 @@ function veloAnswer(idx, v, q, budget){
     const sc=document.getElementById('veloScore'); if(sc){ sc.textContent=velo.score; sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop'); }
     if(!velo.halfFired && velo.legCost && velo.legProgress/velo.legCost>=0.5){ velo.halfFired=true; if(sky) veloMilestone(sky,'½ to '+DESTS[velo.target].name); }
     else if(sky){ if(velo.streak===10) veloOrbitSeq(sky); else if(velo.streak>0 && velo.streak%5===0) veloMilestone(sky, velo.streak); }
-    setTimeout(()=>{ velo.pos++; const docked=velo.legProgress>=velo.legCost;
+    setTimeout(()=>{ if(!q.recallGloss) velo.pos++; const docked=velo.legProgress>=velo.legCost;   // glossary rounds are interstitial — don't consume a queue card
       if(!velo.over && !velo._wonFx && (docked || velo.pos>=velo.queue.length)){ velo._wonFx=true; veloReachWaypoint(v); }
       else renderVelocity(v); }, velo.streak===10?1650:(velo.streak>0&&velo.streak%5===0?1100:750));
   } else {
     velo.streak=0; if(!velo.zen) velo.hearts--; velo.missed++;
-    srsGrade(q.card,'again'); updateDueBadge();                 // miss -> reset + resurfaces soon
-    const at=Math.min(velo.queue.length, velo.pos+6); velo.queue.splice(at,0,q.card);  // re-queue (continued testing)
+    if(q.card){ srsGrade(q.card,'again'); const at=Math.min(velo.queue.length, velo.pos+6); velo.queue.splice(at,0,q.card); }  // miss -> reset + re-queue (glossary rounds aren't in the card queue)
+    updateDueBadge();
     const why=firstSentence(stripHtml(q.card.back));
     veloHudComboReset(); veloBuzz([0,30,40,30]);
     const lead = idx===-1 ? '⏱ Time — ' : (q.mode==='recall' && closeMiss ? 'So close — ' : '✗ ');
@@ -1905,7 +1920,7 @@ function veloAnswer(idx, v, q, budget){
     if(skyN){ skyN.classList.add('flash'); setTimeout(function(){ if(skyN) skyN.classList.remove('flash'); },420); }
     if(!over){                                                                          // normal miss: fall back to ground, advance
       if(rkN) rkN.style.transform='translateY(0px)'; if(veloFx) veloFx.setStreak(0); if(innerN) innerN.classList.add('stall');
-      setTimeout(()=>{ velo.pos++; renderVelocity(v); }, 1900);
+      setTimeout(()=>{ if(!q.recallGloss) velo.pos++; renderVelocity(v); }, 1900);
     } else {                                                                            // killing blow: dramatic death, then summary
       setTimeout(()=>{ veloDeathSequence(v); }, 850);
     }
