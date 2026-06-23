@@ -1868,6 +1868,7 @@ function renderVelocity(v){
 
 function veloAnswer(idx, v, q, budget){
   if(!velo || velo.locked) return; velo.locked=true;
+  try {
   if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
   velo.answered++;
   const tiles=v.querySelectorAll('.velo-tile');
@@ -1908,7 +1909,7 @@ function veloAnswer(idx, v, q, budget){
     velo.streak=0; if(!velo.zen) velo.hearts--; velo.missed++;
     if(q.card){ srsGrade(q.card,'again'); const at=Math.min(velo.queue.length, velo.pos+6); velo.queue.splice(at,0,q.card); }  // miss -> reset + re-queue (glossary rounds aren't in the card queue)
     updateDueBadge();
-    const why=firstSentence(stripHtml(q.card.back));
+    const why=firstSentence(stripHtml(q.card ? q.card.back : ((q.gloss && q.gloss.eli5) || '')));   // glossary rounds have no card — use the term's definition
     veloHudComboReset(); veloBuzz([0,30,40,30]);
     const lead = idx===-1 ? '⏱ Time — ' : (q.mode==='recall' && closeMiss ? 'So close — ' : '✗ ');
     if(fb) fb.innerHTML='<div class="velo-fb-no">'+lead+'Answer: <b>'+q.answer+'</b><div class="velo-why">'+why+'</div></div>';
@@ -1925,6 +1926,9 @@ function veloAnswer(idx, v, q, budget){
       setTimeout(()=>{ veloDeathSequence(v); }, 850);
     }
   }
+  } catch(err){ try{ console.error('veloAnswer error', err); }catch(_){ }                 // never hard-lock: recover and advance
+    if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
+    setTimeout(function(){ if(velo && mode==='velocity'){ if(!q.recallGloss) velo.pos++; renderVelocity(v); } }, 250); }
 }
 
 function veloReachWaypoint(v){ veloBankWaypoint(velo.scope, velo.target, velo.best, velo.correct); velo._reached=velo.target; veloVictorySequence(v); }   // bank progress, then the dock/flag cinematic
