@@ -128,6 +128,32 @@ window.MathJax = {
   .velo-fb-no { color: var(--ink); font-size: 14px; }
   .velo-fb-no b { color: var(--good); }
   .velo-why { color: var(--ink-dim); font-size: 13px; margin-top: 6px; line-height: 1.45; }
+  /* Velocity 2.0 */
+  .velo-mhud{display:inline-flex;align-items:center;gap:7px;padding:3px 11px 3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel);position:relative;overflow:hidden;transition:box-shadow .25s,border-color .25s;font-variant-numeric:tabular-nums}
+  .velo-mhud .vm-flame{font-size:13px;color:var(--ink-dim)} .velo-mhud .vm-lbl{font-size:10px;letter-spacing:.06em;color:var(--ink-dim)} .velo-mhud .vm-x{font-size:18px;font-weight:700;color:var(--ink-dim)}
+  .velo-mhud .vm-fill{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,#f7b06e,#ffd166);transition:width .3s}
+  .velo-mhud[data-tier="1"]{border-color:rgba(255,180,90,.4);background:rgba(255,180,90,.10)} .velo-mhud[data-tier="1"] .vm-x{color:#ffd166}
+  .velo-mhud[data-tier="2"]{border-color:rgba(255,180,90,.6);animation:vmPulse 1s ease-in-out infinite} .velo-mhud[data-tier="2"] .vm-x{color:#ffd9a0}
+  @keyframes vmPulse{0%,100%{box-shadow:0 0 10px rgba(255,190,110,.25)}50%{box-shadow:0 0 22px rgba(255,190,110,.55)}}
+  .velo-mhud.bump{animation:vmBump .3s ease-out} @keyframes vmBump{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+  .velo-route{display:flex;align-items:center;gap:10px;margin-bottom:10px} .velo-route .velo-routesvg{flex:1;height:13px}
+  .velo-target{font-size:12px;font-weight:700;color:var(--ink-dim);white-space:nowrap}
+  .velo-map{display:block;margin:14px auto 6px} .velo-map-pulse{transform-origin:center;animation:veloMapPulse 1.6s ease-in-out infinite}
+  @keyframes veloMapPulse{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:.8;transform:scale(1.25)}}
+  .velo-maphost{margin:8px 0} .velo-nextdest{font-size:12.5px;color:var(--ink-dim);text-align:center;margin-top:2px}
+  .velo-recall{display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:4px}
+  .velo-recall-hint{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#f7b06e;opacity:.9;font-weight:700}
+  .velo-recall-row{display:flex;gap:8px;width:100%;max-width:520px}
+  .velo-input{flex:1;background:rgba(12,18,34,.72);border:1.5px solid var(--line);border-radius:12px;padding:13px 15px;color:#eef3fb;font-size:17px;font-weight:600;outline:none;transition:border-color .15s,box-shadow .15s}
+  .velo-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,157,255,.18)}
+  .velo-input.shake{animation:veloShake .4s} .velo-input.ok{border-color:var(--good);box-shadow:0 0 0 3px rgba(70,211,154,.22)}
+  .velo-input.no{border-color:var(--bad);box-shadow:0 0 0 3px rgba(255,107,107,.22)} .velo-input.close{border-color:#ff9f43;box-shadow:0 0 0 3px rgba(255,159,67,.22)}
+  .velo-skip{font-size:12px;opacity:.7;padding:6px 10px;background:transparent;border:0;color:var(--ink-dim);cursor:pointer}
+  @keyframes veloShake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-5px)}}
+  .velo-report{text-align:left} .vr-banner{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .vr-route{font-size:15px;color:var(--ink-dim);margin:2px 0 8px} .vr-score{font-size:46px;font-weight:800;line-height:1}
+  .vr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px}
+  .vr-cell{background:var(--panel2);border-radius:10px;padding:10px 12px} .vr-cell .k{font-size:11px;color:var(--ink-dim)} .vr-cell .v{font-size:19px;font-weight:700}
   .velo-scope { display: flex; gap: 10px; justify-content: center; margin: 16px 0 6px; flex-wrap: wrap; }
   .velo-scope-btn.on { border-color: var(--accent); background: rgba(91,157,255,.14); color: var(--ink); }
   .velo-zen { display: block; margin: 12px 0; color: var(--ink-dim); font-size: 13px; }
@@ -1341,6 +1367,92 @@ document.addEventListener('keydown', e=>{
 let velo=null, veloTimer=null, veloRAF=null, veloFx=null;
 const VELO_BASE=100, VELO_SPEED_MAX=60, VELO_HEARTS=3;
 
+/* ============ VELOCITY 2.0: missions, biomes, recall, haptics ============ */
+function veloClamp(v,lo,hi){ return v<lo?lo:(v>hi?hi:v); }
+const DESTS=[
+ {key:"earth",name:"Earth Orbit",distAU:0,color:"#2f74b4"},{key:"moon",name:"The Moon",distAU:1,color:"#9fb0c8"},
+ {key:"mars",name:"Mars",distAU:2.2,color:"#d56f7a"},{key:"belt",name:"Asteroid Belt",distAU:3.6,color:"#9a7d74"},
+ {key:"jupiter",name:"Jupiter",distAU:5.2,color:"#f0a866"},{key:"saturn",name:"Saturn",distAU:7,color:"#e0b878"},
+ {key:"uranus",name:"Uranus",distAU:8.6,color:"#5fb0a8"},{key:"neptune",name:"Neptune",distAU:10,color:"#5b9dff"},
+ {key:"kuiper",name:"Kuiper Belt",distAU:11.5,color:"#8b7cff"},{key:"heliopause",name:"Heliopause",distAU:13,color:"#b07e9e"},
+ {key:"voyager",name:"Voyager 1",distAU:15,color:"#fbbf24"},{key:"deepspace",name:"Deep Space",distAU:17.5,color:"#46d39a"}];
+let _veloProg=null;
+function veloProgLoad(){ if(_veloProg) return _veloProg; try{ const r=localStorage.getItem('ell_velo_v1'); _veloProg=r?JSON.parse(r):null; }catch(e){} if(!_veloProg) _veloProg={v:1,global:{furthestIdx:-1,flights:0,bestStreakEver:0,totalCorrect:0},scopes:{}}; return _veloProg; }
+function veloProgSave(){ try{ localStorage.setItem('ell_velo_v1', JSON.stringify(_veloProg)); }catch(e){} }
+function veloScopeProg(scope){ const p=veloProgLoad(); return p.scopes[scope] || (p.scopes[scope]={reachedIdx:-1,flights:0,bestStreak:0}); }
+function veloNextTargetIdx(scope){ const r=veloScopeProg(scope).reachedIdx; return Math.min(DESTS.length-1, Math.max(1, r+1)); }
+function veloBankWaypoint(scope, idx, bestStreak, correct){ const p=veloProgLoad(), s=veloScopeProg(scope);
+  s.reachedIdx=Math.max(s.reachedIdx,idx); s.flights++; s.bestStreak=Math.max(s.bestStreak,bestStreak);
+  p.global.furthestIdx=Math.max(p.global.furthestIdx,idx); p.global.flights++; p.global.bestStreakEver=Math.max(p.global.bestStreakEver,bestStreak); p.global.totalCorrect+=correct; veloProgSave(); }
+function veloMapSVG(scope, opts){ opts=opts||{}; const sp=veloScopeProg(scope), reached=(opts.reached!=null?Math.max(opts.reached,sp.reachedIdx):sp.reachedIdx), nextIdx=veloNextTargetIdx(scope); const maxAU=DESTS[DESTS.length-1].distAU;
+  if(opts.mini){ const W=840,Y=5; const X=d=>40+(d.distAU/maxAU)*(W-80); const tx=X(DESTS[nextIdx]); let dots='';
+    for(const d of DESTS){ const x=X(d), on=DESTS.indexOf(d)<=reached; dots+='<circle cx="'+x.toFixed(1)+'" cy="6.5" r="2.4" fill="'+d.color+'" opacity="'+(on?'1':'.4')+'"/>'; }
+    return '<svg viewBox="0 0 '+W+' 13" width="100%" class="velo-routesvg" preserveAspectRatio="none" aria-hidden="true"><line x1="40" y1="6.5" x2="800" y2="6.5" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="2 5"/><rect id="veloRouteFill" x="40" y="'+Y+'" height="3" width="0" rx="1.5" fill="var(--accent)" data-tx="'+tx.toFixed(1)+'"/>'+dots+'</svg>'; }
+  const W=840,H=120,CY=56; const X=d=>40+(d.distAU/maxAU)*(W-80); let g='<line x1="40" y1="'+CY+'" x2="800" y2="'+CY+'" stroke="var(--line)" stroke-width="2" stroke-dasharray="3 6"/>';
+  DESTS.forEach((d,i)=>{ const x=X(d), isReached=i<=reached, isNext=(i===nextIdx&&i>reached);
+    g+='<g transform="translate('+x.toFixed(1)+','+CY+')"><circle r="9" fill="'+d.color+'" opacity="'+(isReached?'1':isNext?'.95':'.35')+'"/>'+(isNext?'<circle r="14" fill="none" stroke="'+d.color+'" stroke-width="1.5" class="velo-map-pulse"/>':'')+(isReached?'<text y="4" text-anchor="middle" font-size="11" fill="#0b0e14">✓</text>':'')+'<text y="30" text-anchor="middle" font-size="10" fill="var(--ink-dim)" opacity="'+(isReached||isNext?'1':'.6')+'">'+d.name+'</text></g>'; });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" class="velo-map" aria-label="Mission map">'+g+'</svg>'; }
+// ---- biomes ----
+function veloHexRGB(h){ h=h.replace('#',''); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; const n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function veloRGBstr(rgb){ return rgb[0]+','+rgb[1]+','+rgb[2]; }
+function veloRGBhex(rgb){ return '#'+rgb.map(x=>veloClamp(Math.round(x),0,255).toString(16).padStart(2,'0')).join(''); }
+function veloLighten(h,amt){ const c=veloHexRGB(h); return [0,1,2].map(i=>Math.round(c[i]+(255-c[i])*amt)); }
+const VELO_BIOMES={
+ foundations:{sky:["#111722","#1e2948"],aurora:["#5e8dde","#785ff2","#49c7e9"],accent:"#84a6e1",planet:"#4466a2"},
+ streaming:{sky:["#13201f","#224444"],aurora:["#65d7cc","#5fb1f2","#49e996"],accent:"#89dcd4",planet:"#4c9a92"},
+ architecture:{sky:["#0f0b28","#211254"],aurora:["#5f4cf0","#bf5ff2","#497ae9"],accent:"#7d6ef7",planet:"#3522c3"},
+ databases:{sky:["#250e11","#4f1817"],aurora:["#eb5161","#f29e5f","#e9499d"],accent:"#ec7986",planet:"#b23441"},
+ jvm:{sky:["#27120c","#542912"],aurora:["#f0714c","#f2d05f","#e94968"],accent:"#f68e6f",planet:"#c14825"},
+ spark:{sky:["#28190b","#543a12"],aurora:["#f09b4c","#eff25f","#e95349"],accent:"#f7b06e",planet:"#c36f22"},
+ obs:{sky:["#28200b","#544a12"],aurora:["#f0c24c","#ccf25f","#e97949"],accent:"#f7d16e",planet:"#c39622"},
+ ml:{sky:["#0d261c","#145241"],aurora:["#4cf0ae","#5fdef2","#49e965"],accent:"#74f1be",planet:"#2cb980"},
+ lakehouse:{sky:["#24180f","#4d3519"],aurora:["#e79355","#f2ec5f","#e94a49"],accent:"#e8aa7d",planet:"#ac6a39"},
+ cloud:{sky:["#1d1816","#3b312b"],aurora:["#c68977","#f2d15f","#e94967"],accent:"#cea497",planet:"#856961"},
+ languages:{sky:["#1e151b","#3f2733"],aurora:["#ce6fab","#f25f6d","#df49e9"],accent:"#d491bc",planet:"#8e577a"},
+ governance:{sky:["#0b1728","#122554"],aurora:["#4c8ef0","#735ff2","#49cce9"],accent:"#6ea5f7",planet:"#2263c3"}};
+const VELO_BIOME_DEFAULT={_atmRGB:"70,140,225",_earth:["#86c4f2","#2f74b4","#0f2f57"],_aurRGB:["rgba(80,235,170,","rgba(120,180,255,","rgba(225,130,255,"],accent:"#5b9dff",_isDefault:true};
+function veloBiome(scope){ if(scope && scope.slice(0,5)==='deck:'){ const b=VELO_BIOMES[scope.slice(5)]; if(b) return veloBiomePrecompute(b); } return VELO_BIOME_DEFAULT; }
+function veloBiomePrecompute(B){ if(B._aurRGB) return B; B._atmRGB=veloRGBstr(veloHexRGB(B.sky[1])); B._earth=[veloRGBhex(veloLighten(B.planet,0.25)), B.planet, B.sky[1]]; B._aurRGB=B.aurora.map(h=>'rgba('+veloRGBstr(veloHexRGB(h))+','); return B; }
+// ---- haptics ----
+const VELO_HAPTICS_KEY='ell_velo_haptics';
+function veloMuted(){ try{ return localStorage.getItem(VELO_HAPTICS_KEY)==='off'; }catch(e){ return false; } }
+function veloBuzz(pat){ if(veloMuted())return; if(!('vibrate' in navigator))return; if(!window.matchMedia||!matchMedia('(pointer:coarse)').matches)return; try{ navigator.vibrate(pat); }catch(e){} }
+// ---- recall matcher (pure, unit-tested 28/28) ----
+const VELO_W2D={two:'2',three:'3',four:'4',five:'5',six:'6',seven:'7',eight:'8',nine:'9',ten:'10',one:'1',zero:'0'};
+const VELO_D2W={'2':'two','3':'three','4':'four','5':'five','6':'six','7':'seven','8':'eight','9':'nine','10':'ten','1':'one','0':'zero'};
+function veloNormalize(s){ if(s==null) return ''; s=String(s).toLowerCase();
+  try{ s=s.normalize('NFKD').replace(/[̀-ͯ]/g,''); }catch(e){}
+  s=s.replace(/[‘’‛′]/g,"'").replace(/[“”″]/g,'"');
+  s=s.replace(/[-‐-―_/\\.]/g,' '); s=s.replace(/\bthe\b|\ban?\b/g,' '); s=s.replace(/'/g,'');
+  s=s.replace(/[^a-z0-9+ ]+/g,' '); s=s.replace(/\s+/g,' ').trim();
+  s=s.split(' ').map(w=>VELO_D2W[w]||w).join(' '); return s; }
+function veloSig(s){ return veloNormalize(s).replace(/[^a-z0-9]+/g,''); }
+function veloInitials(s){ const w=veloNormalize(s).split(' ').filter(Boolean); return w.length<2?'':w.map(x=>x[0]).join(''); }
+function veloInitialsDigit(s){ const w=veloNormalize(s).split(' ').filter(Boolean); if(w.length<2) return ''; return w.map(x=>VELO_W2D[x]||x[0]).join(''); }
+function veloLev(a,b,max){ const la=a.length, lb=b.length; if(Math.abs(la-lb)>max) return max+1; let prev=[]; for(let j=0;j<=lb;j++) prev[j]=j;
+  for(let i=1;i<=la;i++){ let cur=[i],best=i; for(let j=1;j<=lb;j++){ const c=a[i-1]===b[j-1]?0:1; cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+c); if(cur[j]<best) best=cur[j]; } if(best>max) return max+1; prev=cur; } return prev[lb]; }
+function veloWordBudget(w){ return w.length<=4?0 : w.length<=7?1 : 2; }
+function veloStemEq(a,b){ const mn=Math.min(a.length,b.length), mx=Math.max(a.length,b.length); return mn>=3 && mx-mn<=4 && (a.slice(0,mn)===b.slice(0,mn)); }
+function veloWordsMatch(ta,ca){ const tw=ta.split(' ').filter(Boolean), cw=ca.split(' ').filter(Boolean); if(!tw.length || tw.length!==cw.length) return false; let total=0;
+  for(let i=0;i<tw.length;i++){ if(tw[i]===cw[i]) continue; if(veloStemEq(tw[i],cw[i])) continue; const b=veloWordBudget(cw[i]); if(b===0) return false; const d=veloLev(tw[i],cw[i],b); if(d>b) return false; total+=d; if(total>2) return false; } return true; }
+function veloRecallMatch(typed, answer, aliases){ const res={correct:false,close:false}; const tNorm=veloNormalize(typed); if(!tNorm) return res;
+  const cands=[answer].concat(aliases||[]).filter(Boolean); const tSig=veloSig(typed), tInit=veloInitials(typed); let near=false;
+  for(const cand of cands){ const cNorm=veloNormalize(cand), cSig=veloSig(cand), cInit=veloInitials(cand), cInitD=veloInitialsDigit(cand); if(!cSig) continue;
+    if(tNorm===cNorm || tSig===cSig){ res.correct=true; return res; }
+    if(tSig.length>=2 && (tSig===cInit || tSig===cInitD)){ res.correct=true; return res; }
+    if(cSig.length>=2 && cSig===tInit){ res.correct=true; return res; }
+    if(veloWordsMatch(tNorm,cNorm)){ res.correct=true; return res; }
+    if(cNorm.indexOf(' ')<0 && tNorm.indexOf(' ')<0){ const b=veloWordBudget(cSig); if(b>0 && veloLev(tSig,cSig,b)<=b){ res.correct=true; return res; } }
+    if(!near){ const b=Math.max(1,veloWordBudget(cSig)); if(veloLev(tSig,cSig,b+1)<=b+1) near=true; } }
+  res.close=near; return res; }
+function veloAliasesFor(card){ if(typeof GLOSSARY!=='object') return []; const want=veloSig(card.front); for(const id in GLOSSARY){ const g=GLOSSARY[id]; if(g&&g.term&&veloSig(g.term)===want) return (g.aliases||[]); } return []; }
+// ---- HUD live-update helpers ----
+function veloHudCombo(streak, mult){ const mh=document.getElementById('veloMhud'); if(!mh) return; const n=document.getElementById('veloStreakN'), x=document.getElementById('veloMult'), f=document.getElementById('veloMfill');
+  if(n) n.textContent=streak; if(x) x.textContent='×'+mult.toFixed(1); mh.dataset.tier = mult>=1.8?2:mult>=1.5?1:0; if(f) f.style.width=(Math.min(streak,10)/10*100)+'%'; mh.classList.remove('bump'); void mh.offsetWidth; mh.classList.add('bump'); }
+function veloHudComboReset(){ const mh=document.getElementById('veloMhud'); if(!mh) return; mh.dataset.tier=0; const n=document.getElementById('veloStreakN'), x=document.getElementById('veloMult'), f=document.getElementById('veloMfill'); if(n) n.textContent='0'; if(x) x.textContent='×1.0'; if(f) f.style.width='0%'; }
+function veloRouteAdvance(){ const f=document.getElementById('veloRouteFill'); if(f && velo){ const tx=parseFloat(f.getAttribute('data-tx'))||800; const frac=velo.legCost?Math.min(1,velo.legProgress/velo.legCost):0; f.setAttribute('width',(frac*(tx-40)).toFixed(1)); }
+  const t=document.getElementById('veloTarget'); if(t && velo) t.textContent='→ '+DESTS[velo.target].name+' · '+velo.legProgress+'/'+velo.legCost; }
+
 function veloPool(scope){
   if(scope==='weak'){ const st=srsLoad(), now=Date.now();
     const due=CARDS.filter(c=>{ const s=st[cardId(c)]; return s && s.due<=now; });
@@ -1350,7 +1462,7 @@ function veloPool(scope){
   return CARDS;
 }
 function veloBox(c){ const s=srsLoad()[cardId(c)]; return s?s.box:0; }            // 0..6 mastery
-function veloBudget(q){ if(velo&&velo.zen) return Infinity; return Math.max(6, Math.min(16, Math.round(4 + (q.prompt.length/18) + (6-q.box)))); }
+function veloBudget(q){ if(velo&&velo.zen) return Infinity; return Math.max(6, Math.min(19, Math.round(4 + (q.prompt.length/18) + (6-q.box) + (q.mode==='recall'?3:0)))); }
 function veloBuildQueue(pool){ const st=srsLoad(), now=Date.now(), due=[], rest=[];
   pool.forEach(c=>{ const s=st[cardId(c)]; if(s&&s.due<=now) due.push({c,d:s.due}); else rest.push(c); });
   due.sort((a,b)=>a.d-b.d);
@@ -1368,7 +1480,11 @@ function veloQuestion(c){
   const options=shuffle([correct].concat(veloDistractors(correct,c.sec,nOpts-1)));
   let sent=firstSentence(stripHtml(c.back));
   try{ const r=new RegExp(stripHtml(correct).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'); sent=sent.replace(r,'_____'); }catch(e){}
-  return { card:c, prompt:sent, options, answer:correct, box };
+  const recallProb=(velo&&velo.zen)?0.85:(box>=5?0.55:0.35);                  // type-the-term: a desirable difficulty for well-known cards
+  const wc=veloNormalize(correct).split(' ').filter(Boolean).length, sig=veloSig(correct);
+  const typeable = sig.length>=2 && sig.length<=28 && wc>=1 && wc<=4 && sent.indexOf('_____')>=0;
+  const mode=(box>=3 && typeable && Math.random()<recallProb)?'recall':'mc';
+  return { card:c, prompt:sent, options, answer:correct, box, mode, aliases: mode==='recall'?veloAliasesFor(c):[] };
 }
 
 /* ---- Velocity visuals: rocket, starfield + dopamine juice ---- */
@@ -1410,8 +1526,9 @@ function veloOrbitSeq(sky){ if(!sky) return;
   for(let k=0;k<4;k++) setTimeout(()=>{ if(veloFx) veloFx.burst(1.4); }, k*120); }
 
 /* Canvas particle engine: parallax starfield + rocket exhaust plume + additive bursts + warp. */
-function veloFxStart(canvas, sky, streak0){
+function veloFxStart(canvas, sky, streak0, biome){
   if(!canvas || !sky) return null; const ctx=canvas.getContext('2d'); if(!ctx) return null;
+  const B=biome?veloBiomePrecompute(biome):VELO_BIOME_DEFAULT;   // per-deck sky palette (precomputed once)
   const dpr=Math.min(2, window.devicePixelRatio||1); let LW=1, LH=1;
   function resize(){ const r=sky.getBoundingClientRect(); LW=Math.max(1,r.width); LH=Math.max(1,r.height); canvas.width=Math.round(LW*dpr); canvas.height=Math.round(LH*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); }
   resize();
@@ -1588,9 +1705,9 @@ function veloFxStart(canvas, sky, streak0){
     fx.alt += ((Math.min(fx.streak,10)/10)-fx.alt)*Math.min(1,dt*2.5);
     const alt=fx.alt;
     const atmA=(1-alt)*0.55;
-    if(atmA>0.01){ const ag=ctx.createLinearGradient(0,LH*0.4,0,LH); ag.addColorStop(0,'rgba(50,100,180,0)'); ag.addColorStop(1,'rgba(70,140,225,'+atmA.toFixed(3)+')'); ctx.fillStyle=ag; ctx.fillRect(0,0,LW,LH); }
+    if(atmA>0.01){ const ag=ctx.createLinearGradient(0,LH*0.4,0,LH); ag.addColorStop(0,'rgba(50,100,180,0)'); ag.addColorStop(1,'rgba('+B._atmRGB+','+atmA.toFixed(3)+')'); ctx.fillStyle=ag; ctx.fillRect(0,0,LW,LH); }
     const ER=LW*1.6, ehy=LH*(0.86+alt*0.40), ecy=ehy+ER, ecx=LW/2, va=Math.asin(Math.min(1,(LW/2+40)/ER));
-    const eg=ctx.createLinearGradient(0,ehy,0,ehy+96); eg.addColorStop(0,'#86c4f2'); eg.addColorStop(0.16,'#2f74b4'); eg.addColorStop(1,'#0f2f57');
+    const eg=ctx.createLinearGradient(0,ehy,0,ehy+96); eg.addColorStop(0,B._earth[0]); eg.addColorStop(0.16,B._earth[1]); eg.addColorStop(1,B._earth[2]);
     ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(ecx,ecy,ER,0,6.283); ctx.fill();
     if(!fx.broke && alt>0.45){ fx.broke=true; fx.breakAt=phase; warp=Math.max(warp,3.6); fx.burst(1.2); }   // punch through the atmosphere
     // ---- additive dynamic layer ----
@@ -1602,7 +1719,7 @@ function veloFxStart(canvas, sky, streak0){
         ctx.beginPath(); ctx.arc(ecx,ecy,cr,1.5*Math.PI-va*0.7+Math.sin(cph)*0.06,1.5*Math.PI-va*0.15+Math.sin(cph)*0.06); ctx.stroke();
         ctx.beginPath(); ctx.arc(ecx,ecy,cr,1.5*Math.PI+va*0.25,1.5*Math.PI+va*0.65); ctx.stroke(); } }
     const aurA=Math.max(0,1-Math.abs(alt-0.4)/0.34)*0.5;                                    // aurora ribbons (mid-altitude)
-    if(aurA>0.02){ const acol=['rgba(80,235,170,','rgba(120,180,255,','rgba(225,130,255,'];
+    if(aurA>0.02){ const acol=B._aurRGB;
       for(let ri=0;ri<3;ri++){ const baseY=LH*(0.58-ri*0.12), amp=9+ri*4, freq=0.012+ri*0.004, ph=phase*(0.5+ri*0.2)+ri*2;
         ctx.lineWidth=9-ri*2; ctx.strokeStyle=acol[ri]+(aurA*(0.85-ri*0.18)).toFixed(3)+')'; ctx.beginPath();
         for(let x=0;x<=LW;x+=14){ const y=baseY+Math.sin(x*freq+ph)*amp+Math.sin(x*freq*2.3+ph*1.3)*amp*0.4; if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); } ctx.stroke(); } }
@@ -1663,18 +1780,25 @@ function renderVelocity(v){
       +'<select id="veloDeck" class="bp-select"><option value="">— or drill one deck —</option>'
       +  decksWithCards.map(d=>'<option value="deck:'+d.id+'">'+d.name+' ('+CARDS.filter(c=>(d.topics||[]).indexOf(c.sec)>=0).length+')</option>').join('')
       +'</select>'
+      +'<div class="velo-maphost" id="veloMapHost">'+veloMapSVG('weak',{})+'</div>'
+      +'<div class="velo-nextdest" id="veloNextDest">Next destination: '+DESTS[veloNextTargetIdx('weak')].name+'</div>'
       +'<label class="velo-zen"><input type="checkbox" id="veloZen"> Zen mode — no timer, no lives (pure practice)</label>'
+      +'<label class="velo-zen"><input type="checkbox" id="veloHapt"'+(veloMuted()?'':' checked')+'> Vibration feedback (mobile)</label>'
       +'<button class="btn primary" id="veloStart">Start ⚡</button>'
       +'</div></div>';
     let scope='weak';
     const btns=[].slice.call(v.querySelectorAll('.velo-scope-btn'));
-    btns.forEach(b=> b.onclick=()=>{ btns.forEach(x=>x.classList.remove('on')); b.classList.add('on'); scope=b.dataset.scope; v.querySelector('#veloDeck').value=''; });
-    v.querySelector('#veloDeck').onchange=e=>{ if(e.target.value){ scope=e.target.value; btns.forEach(x=>x.classList.remove('on')); } else { scope='weak'; btns[0].classList.add('on'); } };
+    function redrawMap(){ const mh=v.querySelector('#veloMapHost'); if(mh) mh.innerHTML=veloMapSVG(scope,{}); const nd=v.querySelector('#veloNextDest'); if(nd) nd.textContent='Next destination: '+DESTS[veloNextTargetIdx(scope)].name; }
+    btns.forEach(b=> b.onclick=()=>{ btns.forEach(x=>x.classList.remove('on')); b.classList.add('on'); scope=b.dataset.scope; v.querySelector('#veloDeck').value=''; redrawMap(); });
+    v.querySelector('#veloDeck').onchange=e=>{ if(e.target.value){ scope=e.target.value; btns.forEach(x=>x.classList.remove('on')); } else { scope='weak'; btns[0].classList.add('on'); } redrawMap(); };
+    v.querySelector('#veloHapt').onchange=e=>{ try{ localStorage.setItem(VELO_HAPTICS_KEY, e.target.checked?'on':'off'); }catch(_){ } };
     v.querySelector('#veloStart').onclick=()=>{
       const zen=v.querySelector('#veloZen').checked;
       const queue=veloBuildQueue(veloPool(scope));
       if(!queue.length) return;
-      velo={ scope, zen, queue, pos:0, score:0, streak:0, best:0, hearts: zen?Infinity:VELO_HEARTS, correct:0, answered:0, missed:0, q:null, locked:false, over:false };
+      const target=veloNextTargetIdx(scope);
+      velo={ scope, zen, queue, pos:0, score:0, streak:0, best:0, hearts: zen?Infinity:VELO_HEARTS, correct:0, answered:0, missed:0, q:null, locked:false, over:false, target, legProgress:0, halfFired:false, _reached:null, _wonFx:false, boxedUp:0 };
+      velo.legCost=Math.min(veloClamp(6+Math.round(target*2.2),6,28), velo.queue.length||6);
       renderVelocity(v);
     };
     return;
@@ -1688,23 +1812,31 @@ function renderVelocity(v){
     : '<span class="hh">'+'♥'.repeat(Math.max(0,velo.hearts))+'</span><span class="hh-off">'+'♥'.repeat(Math.max(0,VELO_HEARTS-velo.hearts))+'</span>';
   v.innerHTML='<div class="velo-wrap">'
     +'<div class="velo-hud"><span class="velo-score" id="veloScore">'+velo.score+'</span>'
-    +  '<span class="velo-streak'+(velo.streak>=3?' hot':'')+'">'+(velo.streak>0?'🔥 '+velo.streak:'')+'</span>'
+    +  '<span class="velo-mhud" id="veloMhud" data-tier="0"><span class="vm-flame">🔥 <b id="veloStreakN">'+velo.streak+'</b></span><span class="vm-lbl">COMBO</span><span class="vm-x" id="veloMult">×'+(1+Math.min(Math.max(velo.streak-1,0),9)*0.1).toFixed(1)+'</span><span class="vm-fill" id="veloMfill" style="width:'+(Math.min(velo.streak,10)/10*100)+'%"></span></span>'
     +  '<span class="velo-hearts">'+heartsHtml+'</span></div>'
     +'<div class="velo-sky'+(velo.streak>=8?' e3':velo.streak>=5?' e2':velo.streak>=2?' e1':'')+'" id="veloSky"><div class="velo-nebula"></div><div class="velo-planets" id="veloPlanets"></div><canvas class="velo-canvas" id="veloCanvas"></canvas><div class="velo-flash"></div>'
     +  '<div class="velo-rocket" id="veloRocket" style="transform:translateY('+veloAltitude(velo.streak)+'px)"><div class="velo-rocket-inner" id="veloRocketInner">'+VELO_ROCKET_SVG+'<div class="velo-flame"></div></div></div>'
     +'</div>'
+    +'<div class="velo-route">'+veloMapSVG(velo.scope,{mini:true})+'<span class="velo-target" id="veloTarget">→ '+DESTS[velo.target].name+' · '+velo.legProgress+'/'+velo.legCost+'</span></div>'
     +(velo.zen?'':'<div class="velo-timebar"><div class="velo-timefill" id="veloTime"></div></div>')
     +'<div class="velo-prompt">'+q.prompt+'</div>'
-    +'<div class="velo-tiles" id="veloTiles">'
-    +  q.options.map((o,i)=>'<button class="velo-tile" data-i="'+i+'"><span class="velo-key">'+(i+1)+'</span>'+o+'</button>').join('')
-    +'</div>'
+    +(q.mode==='recall'
+      ? '<form class="velo-recall" id="veloRecall"><div class="velo-recall-hint">⌨ Manual targeting — type the concept</div><div class="velo-recall-row"><input class="velo-input" id="veloInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type the term…"><button class="btn primary" id="veloSubmit" type="submit">Fire ⚡</button></div><button class="velo-skip" id="veloSkip" type="button">skip (reveal answer)</button></form>'
+      : '<div class="velo-tiles" id="veloTiles">'+q.options.map((o,i)=>'<button class="velo-tile" data-i="'+i+'"><span class="velo-key">'+(i+1)+'</span>'+o+'</button>').join('')+'</div>')
     +'<div class="velo-feedback" id="veloFb"></div>'
     +'<div style="text-align:center;margin-top:10px"><button class="btn" id="veloQuit">End game</button></div>'
     +'</div>';
   if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
-  v.querySelectorAll('.velo-tile').forEach(b=> b.onclick=()=> veloAnswer(+b.dataset.i, v, q, budget));
+  if(q.mode==='recall'){
+    const form=v.querySelector('#veloRecall'), inp=v.querySelector('#veloInput');
+    if(form) form.onsubmit=(e)=>{ e.preventDefault(); q._typed=inp?inp.value:''; veloAnswer(0, v, q, budget); };
+    const sk=v.querySelector('#veloSkip'); if(sk) sk.onclick=()=>{ q._typed=''; q._skip=true; veloAnswer(-2, v, q, budget); };
+    if(inp){ inp.onkeydown=(e)=>{ if(e.key==='Escape'){ e.preventDefault(); q._typed=''; q._skip=true; veloAnswer(-2, v, q, budget); } }; setTimeout(()=>{ try{ inp.focus(); }catch(_){ } },0); }
+  } else {
+    v.querySelectorAll('.velo-tile').forEach(b=> b.onclick=()=> veloAnswer(+b.dataset.i, v, q, budget));
+  }
   veloPlanets(document.getElementById('veloPlanets'));
-  veloFx = veloFxStart(document.getElementById('veloCanvas'), document.getElementById('veloSky'), velo.streak);
+  veloFx = veloFxStart(document.getElementById('veloCanvas'), document.getElementById('veloSky'), velo.streak, veloBiome(velo.scope));
   v.querySelector('#veloQuit').onclick=()=>{ velo.over=true; renderVelocity(v); };
   if(!velo.zen){
     const deadline=Date.now()+budget*1000; q._deadline=deadline;
@@ -1724,7 +1856,10 @@ function veloAnswer(idx, v, q, budget){
   velo.answered++;
   const tiles=v.querySelectorAll('.velo-tile');
   const correctIdx=q.options.indexOf(q.answer);
-  const isCorrect = idx>=0 && q.options[idx]===q.answer;
+  let isCorrect, closeMiss=false;
+  if(q.mode==='recall'){ const typed=(q._typed!=null)?q._typed:(document.getElementById('veloInput')?document.getElementById('veloInput').value:'');
+    if(idx<0 || q._skip){ isCorrect=false; } else { const r=veloRecallMatch(typed,q.answer,q.aliases); isCorrect=r.correct; closeMiss=r.close; } }
+  else { isCorrect = idx>=0 && q.options[idx]===q.answer; }
   tiles.forEach((t,i)=>{ t.disabled=true; if(i===correctIdx) t.classList.add('correct'); else if(i===idx) t.classList.add('wrong'); });
   const fb=document.getElementById('veloFb');
   if(isCorrect){
@@ -1732,25 +1867,37 @@ function veloAnswer(idx, v, q, budget){
     const frac = (velo.zen||!budget||budget===Infinity)?0 : Math.max(0,Math.min(1,rem/budget));
     velo.streak++; velo.best=Math.max(velo.best,velo.streak);
     const mult = 1 + Math.min(velo.streak-1,9)*0.1;             // gentle streak multiplier, accuracy-led
+    const recallMult = q.mode==='recall'?1.5:1.0;              // recall (typed from memory) pays a premium over recognition
     const speed = Math.round(VELO_SPEED_MAX*frac);              // small speed bonus ON TOP of correctness
-    const pts = Math.round((VELO_BASE+speed)*mult);
-    velo.score+=pts; velo.correct++;
+    const pts = Math.round((VELO_BASE+speed)*mult*recallMult);
+    velo.score+=pts; velo.correct++; velo.legProgress++;       // a correct retrieval is thrust toward the next planet
+    const oldBox=veloBox(q.card);
     srsGrade(q.card,'good'); updateDueBadge();                  // successful retrieval -> advance in SRS
-    if(fb) fb.innerHTML='<div class="velo-fb-ok">✓ +'+pts+(speed>0?'  <span class="velo-spd">SPEEDY +'+speed+'</span>':'')+(mult>1?'  <span class="velo-mult">×'+mult.toFixed(1)+'</span>':'')+'</div>';
+    if(veloBox(q.card)>=3 && oldBox<3) velo.boxedUp++;         // crossed into "known" this session
+    veloHudCombo(velo.streak, mult); veloRouteAdvance();
+    veloBuzz(velo.streak%5===0?[20,40,30]:20);
+    if(fb) fb.innerHTML='<div class="velo-fb-ok">'+(q.mode==='recall'?'✓ RECALLED ':'✓ ')+'+'+pts+(speed>0?'  <span class="velo-spd">SPEEDY +'+speed+'</span>':'')+(mult>1?'  <span class="velo-mult">×'+mult.toFixed(1)+'</span>':'')+'</div>';
+    if(q.mode==='recall'){ const inp=document.getElementById('veloInput'); if(inp){ inp.disabled=true; inp.classList.add('ok'); } const sb=document.getElementById('veloSubmit'); if(sb) sb.disabled=true; }
     const sky=document.getElementById('veloSky'), inner=document.getElementById('veloRocketInner'), rk=document.getElementById('veloRocket');
     if(rk) rk.style.transform='translateY('+veloAltitude(velo.streak)+'px)';           // climb with streak
     if(inner){ inner.classList.add('boost'); }
     if(veloFx){ veloFx.burst(1); veloFx.setStreak(velo.streak); }
     if(sky){ veloRing(sky); veloFloatTxt(sky,'+'+pts); }
     const sc=document.getElementById('veloScore'); if(sc){ sc.textContent=velo.score; sc.classList.remove('pop'); void sc.offsetWidth; sc.classList.add('pop'); }
-    if(sky){ if(velo.streak===10) veloOrbitSeq(sky); else if(velo.streak>0 && velo.streak%5===0) veloMilestone(sky, velo.streak); }
-    setTimeout(()=>{ velo.pos++; if(!velo.over && velo.pos>=velo.queue.length && !velo._wonFx){ velo._wonFx=true; veloVictorySequence(v); } else renderVelocity(v); }, velo.streak===10?1650:(velo.streak>0&&velo.streak%5===0?1100:750));
+    if(!velo.halfFired && velo.legCost && velo.legProgress/velo.legCost>=0.5){ velo.halfFired=true; if(sky) veloMilestone(sky,'½ to '+DESTS[velo.target].name); }
+    else if(sky){ if(velo.streak===10) veloOrbitSeq(sky); else if(velo.streak>0 && velo.streak%5===0) veloMilestone(sky, velo.streak); }
+    setTimeout(()=>{ velo.pos++; const docked=velo.legProgress>=velo.legCost;
+      if(!velo.over && !velo._wonFx && (docked || velo.pos>=velo.queue.length)){ velo._wonFx=true; veloReachWaypoint(v); }
+      else renderVelocity(v); }, velo.streak===10?1650:(velo.streak>0&&velo.streak%5===0?1100:750));
   } else {
     velo.streak=0; if(!velo.zen) velo.hearts--; velo.missed++;
     srsGrade(q.card,'again'); updateDueBadge();                 // miss -> reset + resurfaces soon
     const at=Math.min(velo.queue.length, velo.pos+6); velo.queue.splice(at,0,q.card);  // re-queue (continued testing)
     const why=firstSentence(stripHtml(q.card.back));
-    if(fb) fb.innerHTML='<div class="velo-fb-no">'+(idx<0?'⏱ Time — ':'✗ ')+'Answer: <b>'+q.answer+'</b><div class="velo-why">'+why+'</div></div>';
+    veloHudComboReset(); veloBuzz([0,30,40,30]);
+    const lead = idx===-1 ? '⏱ Time — ' : (q.mode==='recall' && closeMiss ? 'So close — ' : '✗ ');
+    if(fb) fb.innerHTML='<div class="velo-fb-no">'+lead+'Answer: <b>'+q.answer+'</b><div class="velo-why">'+why+'</div></div>';
+    if(q.mode==='recall'){ const inp=document.getElementById('veloInput'); if(inp){ inp.disabled=true; inp.classList.add(closeMiss?'close':'no'); if(!closeMiss) inp.classList.add('shake'); } const sb=document.getElementById('veloSubmit'); if(sb) sb.disabled=true; const sk=document.getElementById('veloSkip'); if(sk) sk.disabled=true; }
     const over = !velo.zen && velo.hearts<=0;
     const heartsEl=document.querySelector('.velo-hearts');                              // reflect the lost heart immediately (was only updated on next render)
     if(heartsEl && !velo.zen){ heartsEl.innerHTML='<span class="hh">'+'♥'.repeat(Math.max(0,velo.hearts))+'</span><span class="hh-off">'+'♥'.repeat(Math.max(0,VELO_HEARTS-velo.hearts))+'</span>'; heartsEl.classList.remove('hit'); void heartsEl.offsetWidth; heartsEl.classList.add('hit'); }
@@ -1765,21 +1912,35 @@ function veloAnswer(idx, v, q, budget){
   }
 }
 
+function veloReachWaypoint(v){ veloBankWaypoint(velo.scope, velo.target, velo.best, velo.correct); velo._reached=velo.target; veloVictorySequence(v); }   // bank progress, then the dock/flag cinematic
 function renderVeloDone(v){
   if(veloTimer){ clearInterval(veloTimer); veloTimer=null; }
-  const acc = velo.answered? Math.round(velo.correct/velo.answered*100):0;
-  const reason = (!velo.zen && velo.hearts<=0) ? 'Out of lives' : 'Round complete';
-  v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center">'
-    +'<div class="qtext">'+reason+'</div>'
-    +'<div style="font-size:46px;font-weight:800;color:var(--accent)">'+velo.score+'</div>'
-    +'<div class="readout" style="text-align:left;margin-top:14px">'
-    +  '<div class="ro"><div class="k">Accuracy</div><div class="v">'+acc+'% · '+velo.correct+'/'+velo.answered+'</div></div>'
-    +  '<div class="ro"><div class="k">Best streak</div><div class="v">🔥 '+velo.best+'</div></div>'
-    +  '<div class="ro"><div class="k">Concepts advanced</div><div class="v" style="color:var(--good)">'+velo.correct+'</div></div>'
-    +  '<div class="ro"><div class="k">Re-queued to review</div><div class="v" style="color:#ff9f43">'+velo.missed+'</div></div>'
+  const B=veloBiome(velo.scope), acc = velo.answered? Math.round(velo.correct/velo.answered*100):0;
+  const crash=(!velo.zen && velo.hearts<=0);
+  const routeName = velo.scope.slice(0,5)==='deck:' ? ((DECKS.find(d=>d.id===velo.scope.slice(5))||{}).name||'Deck') : (velo.scope==='weak'?'Weak-spots patrol':'Grand tour');
+  const accent = B._isDefault?'var(--accent)':B.accent;
+  const reachedName = velo._reached!=null?DESTS[velo._reached].name:null;
+  const nextName = DESTS[veloNextTargetIdx(velo.scope)].name;
+  const title = crash ? 'Lost over '+routeName : (reachedName?'Docked at '+reachedName:'Round complete');
+  const distKm = Math.round(velo.best*6 + velo.correct*1.7);
+  const copy = crash
+    ? 'Went down at '+velo.best+'-streak — but the run still counts: '+velo.correct+' retrievals fed your schedule and '+velo.missed+' misses resurface soon. Re-fly when ready.'
+    : (reachedName?'Docked clean. ':'')+velo.boxedUp+' concepts advanced a box, '+velo.missed+' come back sooner — every answer logged to your spaced-repetition route.';
+  const cell=(k,vv,c)=>'<div class="vr-cell"><div class="k">'+k+'</div><div class="v"'+(c?' style="color:'+c+'"':'')+'>'+vv+'</div></div>';
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard velo-report">'
+    +'<div class="vr-banner" style="color:'+accent+'">'+(crash?'FLIGHT LOST':'FLIGHT REPORT')+'</div>'
+    +'<div class="vr-route">'+title+' · '+routeName+'</div>'
+    +'<div class="vr-score" style="color:'+accent+'">'+velo.score+'</div>'
+    +'<div class="vr-grid">'
+    + cell('Distance flown',distKm+' km')
+    + cell('Accuracy',acc+'% · '+velo.correct+'/'+velo.answered)
+    + cell('Best combo','🔥 '+velo.best+' · ×'+(1+Math.min(Math.max(velo.best-1,0),9)*0.1).toFixed(1))
+    + cell('Concepts mastered',velo.boxedUp+'','var(--good)')
+    + cell('Re-queued',velo.missed+'','#f7b06e')
     +'</div>'
-    +'<p class="rv-sub" style="margin-top:14px">Every answer fed your spaced-repetition schedule — misses come back sooner, hits get spaced out. Real progress, not just points.</p>'
-    +'<div class="nav-row"><button class="btn" id="veloAgain">Play again</button><button class="btn primary" id="veloReview">Go to Review</button></div>'
+    +'<div style="margin-top:14px">'+veloMapSVG(velo.scope,{reached:velo._reached})+'</div>'
+    +'<p class="rv-sub" style="margin-top:6px">'+copy+'</p>'
+    +'<div class="nav-row"><button class="btn'+(crash?'':' primary')+'" id="veloAgain">'+(crash?'Retry leg':'Next leg → '+nextName)+'</button><button class="btn" id="veloReview">Go to Review</button></div>'
     +'</div></div>';
   v.querySelector('#veloAgain').onclick=()=>{ velo=null; renderVelocity(v); };
   v.querySelector('#veloReview').onclick=()=>{ velo=null; setMode('review'); };
@@ -1788,7 +1949,7 @@ function renderVeloDone(v){
 /* Game-over death sequence: a random dramatic demise on the canvas, then the summary. */
 const VELO_DEATHS=['ufo','comet','blackhole','meltdown','asteroid','sunflare','rival'];
 function veloDeathSequence(v){
-  velo.dying=true;
+  velo.dying=true; veloBuzz([0,60,50,60,50,120]);
   const rk=document.getElementById('veloRocket');
   const variant=VELO_DEATHS[Math.floor(Math.random()*VELO_DEATHS.length)];
   let finished=false;
@@ -1798,7 +1959,7 @@ function veloDeathSequence(v){
 }
 const VELO_WINS=['station','flag'];
 function veloVictorySequence(v){           // played on a genuine round CLEAR (queue exhausted, lives remaining)
-  velo.dying=true;
+  velo.dying=true; veloBuzz([0,40,30,40,30,40,80]);
   const rk=document.getElementById('veloRocket');
   const variant=VELO_WINS[Math.floor(Math.random()*VELO_WINS.length)];
   let finished=false;
@@ -1826,6 +1987,7 @@ document.addEventListener('keydown', e=>{
     else if(e.key==='Enter'){ const nx=document.getElementById('examNext'); if(nx && !nx.disabled){ e.preventDefault(); nx.click(); } }
     else if(e.key==='s'||e.key==='S'){ e.preventDefault(); const b=document.getElementById('examSkip'); if(b) b.click(); }
   } else if(mode==='velocity' && velo && !velo.over && !velo.locked){
+    if(document.activeElement && document.activeElement.id==='veloInput') return;        // typing the answer (e.g. "2PC") must not select tile 2
     if(/^[1-4]$/.test(e.key)){ const b=v.querySelector('.velo-tile[data-i="'+(+e.key-1)+'"]'); if(b && !b.disabled){ e.preventDefault(); b.click(); } }
   }
 });
