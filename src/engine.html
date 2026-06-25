@@ -326,6 +326,25 @@ window.MathJax = {
   .deeper .deeper-in { padding: 12px 15px; }
   .worked { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 12px 0; font-size: 13.5px; }
   .worked .wt { font-weight: 700; color: var(--warn); margin-bottom: 6px; }
+  /* "Teach me from the ground up" deep-dive panel */
+  .teach { border: 1px solid var(--accent); border-radius: 12px; margin: 14px 0; overflow: hidden; background: linear-gradient(180deg, rgba(91,157,255,.07), rgba(91,157,255,0)); }
+  .teach > summary { cursor: pointer; padding: 13px 16px; font-weight: 800; font-size: 14.5px; color: var(--accent); list-style: none; display: flex; align-items: center; gap: 8px; }
+  .teach > summary::-webkit-details-marker { display: none; }
+  .teach > summary::after { content: "▸"; margin-left: auto; color: var(--accent); transition: transform .2s; }
+  .teach[open] > summary::after { transform: rotate(90deg); }
+  .teach > summary:hover { background: rgba(91,157,255,.09); }
+  .teach .teach-ic { font-size: 16px; }
+  .teach .teach-in { padding: 4px 18px 18px; font-size: 14px; line-height: 1.72; color: var(--ink); }
+  .teach .teach-in > :first-child { margin-top: 4px; }
+  .teach .teach-in h3 { font-size: 15.5px; margin: 18px 0 6px; color: var(--accent2); }
+  .teach .teach-in h4 { font-size: 14px; margin: 15px 0 5px; color: var(--ink); font-weight: 700; }
+  .teach .teach-in p { margin: 9px 0; }
+  .teach .teach-in ul, .teach .teach-in ol { margin: 9px 0 9px 2px; padding-left: 20px; }
+  .teach .teach-in li { margin: 6px 0; }
+  .teach .teach-in code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: 12.8px; }
+  .teach .teach-in strong { color: var(--ink); }
+  .teach .teach-in .analogy { background: var(--panel2); border-left: 3px solid var(--accent2); border-radius: 0 8px 8px 0; padding: 9px 13px; margin: 11px 0; }
+  .teach .teach-in .key { background: rgba(70,211,154,.10); border-left: 3px solid var(--good); border-radius: 0 8px 8px 0; padding: 9px 13px; margin: 11px 0; }
   /* acronym expansion + equations + examples */
   .expand-sub { color: var(--ink-dim); font-size: 13px; margin: -4px 0 10px; font-style: italic; }
   .equation-block { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
@@ -805,6 +824,7 @@ function renderDrawer(){
   if(g.expand) html += '<div class="expand-sub no-link">'+g.expand+'</div>';
   if(g.eli5) html += '<div class="eli5 no-link">'+g.eli5+'</div>';
   if(g.memory) html += '<div class="memory">'+g.memory+'</div>';
+  if(g.teach) html += '<details class="teach"><summary><span class="teach-ic">📖</span> Teach me this from the ground up</summary><div class="teach-in">'+g.teach+'</div></details>';
   if(g.equation) html += renderEquation(g.equation);
   if(g.full) html += g.full;
   if(g.graphic && GRAPHICS[g.graphic]) html += '<div class="graphic" data-graphic="'+g.graphic+'"></div>';
