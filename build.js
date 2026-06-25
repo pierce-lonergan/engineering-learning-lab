@@ -21,7 +21,8 @@ function build() {
 
   let injected = '';
   for (const f of files) {
-    const code = fs.readFileSync(path.join(CONTENT_DIR, f), 'utf8');
+    const code = fs.readFileSync(path.join(CONTENT_DIR, f), 'utf8')
+      .replace(/<\/(script)/gi, '<\\/$1');   // neutralize any literal </script> in content strings so it can't close the inline tag early (runtime string value is unchanged: \/ === /)
     injected += '\n<!-- content: ' + f + ' -->\n<script>\n' + code + '\n</script>\n';
   }
 

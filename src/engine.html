@@ -1409,7 +1409,8 @@ const VELO_BIOMES={
  lakehouse:{sky:["#24180f","#4d3519"],aurora:["#e79355","#f2ec5f","#e94a49"],accent:"#e8aa7d",planet:"#ac6a39"},
  cloud:{sky:["#1d1816","#3b312b"],aurora:["#c68977","#f2d15f","#e94967"],accent:"#cea497",planet:"#856961"},
  languages:{sky:["#1e151b","#3f2733"],aurora:["#ce6fab","#f25f6d","#df49e9"],accent:"#d491bc",planet:"#8e577a"},
- governance:{sky:["#0b1728","#122554"],aurora:["#4c8ef0","#735ff2","#49cce9"],accent:"#6ea5f7",planet:"#2263c3"}};
+ governance:{sky:["#0b1728","#122554"],aurora:["#4c8ef0","#735ff2","#49cce9"],accent:"#6ea5f7",planet:"#2263c3"},
+ frontend:{sky:["#1f0d1c","#401838"],aurora:["#f06bc8","#bf5ff2","#f25f9e"],accent:"#ef93cf",planet:"#a8348a"}};
 const VELO_BIOME_DEFAULT={_atmRGB:"70,140,225",_earth:["#86c4f2","#2f74b4","#0f2f57"],_aurRGB:["rgba(80,235,170,","rgba(120,180,255,","rgba(225,130,255,"],accent:"#5b9dff",_isDefault:true};
 function veloBiome(scope){ if(scope && scope.slice(0,5)==='deck:'){ const b=VELO_BIOMES[scope.slice(5)]; if(b) return veloBiomePrecompute(b); } return VELO_BIOME_DEFAULT; }
 function veloBiomePrecompute(B){ if(B._aurRGB) return B; B._atmRGB=veloRGBstr(veloHexRGB(B.sky[1])); B._earth=[veloRGBhex(veloLighten(B.planet,0.25)), B.planet, B.sky[1]]; B._aurRGB=B.aurora.map(h=>'rgba('+veloRGBstr(veloHexRGB(h))+','); return B; }

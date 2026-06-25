@@ -16,7 +16,8 @@ DECKS_DATA.push(
   { id:"lakehouse",   name:"Lakehouse & Data Warehousing",           color:"#c98a5c", topics:["MEDALLION","LAKE-FORMATS","LAKE-ICEBERG","LAKE-PARQUET","LAKE-LAYOUT","LAKE-OLAP","LAKE-WAREHOUSE","LAKE-ETL","LAKE-OPT","LAKE-ACID","LAKE-STREAM","LAKE-CATALOG","LAKE-ENGINE"] },
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:["CLOUD-MODELS","CLOUD-COMPUTE","CLOUD-S3","CLOUD-NETWORK","CLOUD-IAM","CLOUD-DATA","CLOUD-STREAM","CLOUD-MSG","CLOUD-DB","CLOUD-IAC","CLOUD-OPS","CLOUD-WELLARCH"] },
   { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:["PY-DATAMODEL","PY-GIL","PY-IDIOMS","PY-FUNCTIONS","PY-TYPING","PY-PERF","PY-GOTCHAS","SCALA-FP","SCALA-COLLECTIONS","SCALA-TYPES","SCALA-PATTERN","SCALA-CONC"] },
-  { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:["GOV-QUALITY","GOV-CONTRACTS","GOV-LINEAGE","GOV-CATALOG","GOV-MDM","GOV-PRIVACY","GOV-COMPLIANCE","GOV-ACCESS","GOV-DATAOBS","GOV-MESH","GOV-METADATA","GOV-OPMODEL"] }
+  { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:["GOV-QUALITY","GOV-CONTRACTS","GOV-LINEAGE","GOV-CATALOG","GOV-MDM","GOV-PRIVACY","GOV-COMPLIANCE","GOV-ACCESS","GOV-DATAOBS","GOV-MESH","GOV-METADATA","GOV-OPMODEL"] },
+  { id:"frontend",    name:"Frontend & UI Engineering",              color:"#e879b9", topics:["FE-HTML","FE-CSS","FE-CSSARCH","FE-JS","FE-ASYNC","FE-TS","FE-DOM","FE-REACT","FE-STATE","FE-PERF","FE-A11Y","FE-NET","FE-SEC","FE-TEST","FE-SYSDESIGN"] }
 );
 
 /* topic codes -> display names */
@@ -180,5 +181,21 @@ Object.assign(SECTIONS_DATA, {
   "GOV-DATAOBS":    "Data Observability",
   "GOV-MESH":       "Data Mesh & Data-as-a-Product",
   "GOV-METADATA":   "Metadata Management",
-  "GOV-OPMODEL":    "Governance Operating Model & Stewardship"
+  "GOV-OPMODEL":    "Governance Operating Model & Stewardship",
+  // Frontend & UI Engineering
+  "FE-HTML":      "HTML & Semantics",
+  "FE-CSS":       "CSS Layout & the Box Model",
+  "FE-CSSARCH":   "Modern CSS & Architecture",
+  "FE-JS":        "JavaScript Core",
+  "FE-ASYNC":     "Async JS & the Event Loop",
+  "FE-TS":        "TypeScript",
+  "FE-DOM":       "DOM, Events & Web APIs",
+  "FE-REACT":     "React",
+  "FE-STATE":     "State Management & Data Fetching",
+  "FE-PERF":      "Web Performance & Core Web Vitals",
+  "FE-A11Y":      "Accessibility (a11y)",
+  "FE-NET":       "Networking & the Web Platform",
+  "FE-SEC":       "Frontend Security",
+  "FE-TEST":      "Testing & Build Tooling",
+  "FE-SYSDESIGN": "Frontend System Design & Patterns"
 });
