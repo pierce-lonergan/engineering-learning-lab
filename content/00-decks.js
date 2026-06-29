@@ -17,7 +17,8 @@ DECKS_DATA.push(
   { id:"cloud",       name:"Cloud & Infrastructure (AWS)",           color:"#9a7d74", topics:["CLOUD-MODELS","CLOUD-COMPUTE","CLOUD-S3","CLOUD-NETWORK","CLOUD-IAM","CLOUD-DATA","CLOUD-STREAM","CLOUD-MSG","CLOUD-DB","CLOUD-IAC","CLOUD-OPS","CLOUD-WELLARCH"] },
   { id:"languages",   name:"Languages — Python & Scala",             color:"#b07e9e", topics:["PY-DATAMODEL","PY-GIL","PY-IDIOMS","PY-FUNCTIONS","PY-TYPING","PY-PERF","PY-GOTCHAS","SCALA-FP","SCALA-COLLECTIONS","SCALA-TYPES","SCALA-PATTERN","SCALA-CONC"] },
   { id:"governance",  name:"Data Governance & Quality",              color:"#5b9dff", topics:["GOV-QUALITY","GOV-CONTRACTS","GOV-LINEAGE","GOV-CATALOG","GOV-MDM","GOV-PRIVACY","GOV-COMPLIANCE","GOV-ACCESS","GOV-DATAOBS","GOV-MESH","GOV-METADATA","GOV-OPMODEL"] },
-  { id:"frontend",    name:"Frontend & UI Engineering",              color:"#e879b9", topics:["FE-HTML","FE-CSS","FE-CSSARCH","FE-JS","FE-ASYNC","FE-TS","FE-DOM","FE-REACT","FE-STATE","FE-PERF","FE-A11Y","FE-NET","FE-SEC","FE-TEST","FE-SYSDESIGN"] }
+  { id:"frontend",    name:"Frontend & UI Engineering",              color:"#e879b9", topics:["FE-HTML","FE-CSS","FE-CSSARCH","FE-JS","FE-ASYNC","FE-TS","FE-DOM","FE-REACT","FE-STATE","FE-PERF","FE-A11Y","FE-NET","FE-SEC","FE-TEST","FE-SYSDESIGN"] },
+  { id:"interview-prep", name:"Interview Prep",                      color:"#2dd4bf", topics:["IP-LIFECYCLE","IP-CLEARING","IP-RECON","IP-EQUITIES","IP-CRYPTO","IP-PREDICT","IP-APIS","IP-PYTHON","IP-PANDAS","IP-SQL","IP-AUTOSYS","IP-MARKETS","IP-DATAENG","IP-SCENARIOS","IP-BEHAVIORAL","IP-COMPANY"] }
 );
 
 /* topic codes -> display names */
@@ -197,5 +198,22 @@ Object.assign(SECTIONS_DATA, {
   "FE-NET":       "Networking & the Web Platform",
   "FE-SEC":       "Frontend Security",
   "FE-TEST":      "Testing & Build Tooling",
-  "FE-SYSDESIGN": "Frontend System Design & Patterns"
+  "FE-SYSDESIGN": "Frontend System Design & Patterns",
+  // Interview Prep — Python Automation Analyst, Trading Operations (post-trade)
+  "IP-LIFECYCLE":   "Trade Lifecycle & Post-Trade Operations",
+  "IP-CLEARING":    "Clearing & Settlement",
+  "IP-RECON":       "Reconciliation & Breaks Management",
+  "IP-EQUITIES":    "Equities Post-Trade (DTCC / T+1)",
+  "IP-CRYPTO":      "Crypto & Digital Asset Operations",
+  "IP-PREDICT":     "Prediction Markets",
+  "IP-APIS":        "Exchange APIs & Connectivity (FIX/REST/WS)",
+  "IP-PYTHON":      "Python for Automation",
+  "IP-PANDAS":      "Pandas for Trade Data",
+  "IP-SQL":         "SQL for Trade & Financial Data",
+  "IP-AUTOSYS":     "Automation System Design",
+  "IP-MARKETS":     "Financial Markets Fundamentals",
+  "IP-DATAENG":     "Data Engineering for Trade Ops",
+  "IP-SCENARIOS":   "Trade-Ops System Design Scenarios",
+  "IP-BEHAVIORAL":  "Behavioral, Communication & Positioning",
+  "IP-COMPANY":     "Role & Employer Intel + Questions to Ask"
 });
