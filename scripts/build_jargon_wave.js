@@ -5,7 +5,7 @@
  *   node scripts/build_jargon_wave.js <out-workflow-path>
  * Output workflow returns result.batches[] = { entries:[{key,term,aliases,group,eli5,memory,full,worked,teach,related}] }. */
 const fs = require('fs'), path = require('path');
-const OUT = process.argv[2];
+const DECK = process.argv[2]; const OUT = process.argv[3];
 if (!OUT) { console.error('usage: node scripts/build_jargon_wave.js <out-path>'); process.exit(2); }
 
 const GLOSSARY_DATA = {}, CARDS_DATA = [], SECTIONS_DATA = {}, DECKS_DATA = [], ENHANCE = {}, QUIZ_DATA = [];
@@ -15,20 +15,33 @@ const P = ['GLOSSARY_DATA','CARDS_DATA','SECTIONS_DATA','DECKS_DATA','ENHANCE','
 const A = [GLOSSARY_DATA,CARDS_DATA,SECTIONS_DATA,DECKS_DATA,ENHANCE,enh,QUIZ_DATA,stub,stub,stub,stub,stub,stub,stub];
 for (const f of fs.readdirSync('content').filter(f => f.endsWith('.js')).sort()) { try { new Function(...P, fs.readFileSync(path.join('content', f), 'utf8'))(...A); } catch (e) {} }
 for (const id in ENHANCE) { if (GLOSSARY_DATA[id]) Object.assign(GLOSSARY_DATA[id], ENHANCE[id]); }
-const FT = new Set(DECKS_DATA.find(d => d.id === 'frontend').topics);
+const _deck = DECKS_DATA.find(d => d.id === DECK);
+if (!_deck) { console.error('no deck: ' + DECK); process.exit(2); }
+const FT = new Set(_deck.topics);
 
-// curated allow-list of REAL frontend/web jargon the deck uses but never defines
-const KEEP = [
-  'WCAG','ARIA','WAI-ARIA','WAI','a11y','POUR','ADA','NVDA','JAWS','APG','APCA','UIA','accname',
-  'LCP','INP','FID','CWV','TTFB','FCP','TBT','RUM','FOIT','FOUT','FOUC','DPR','CSSOM',
-  'SSR','CSR','SSG','RSC','SPA','MFE','MVC','FSM','TTI','hydration',
-  'CORS','SOP','URL','URI','XHR','MIME','CRUD','JSONP','SNI','COOP','COEP','IDN','SSO','W3C','WHATWG','RFC','HTTP methods','BOM',
-  'SRI','HSTS','XFO','clickjacking','prototype pollution',
-  'DOM','JSX','ESM','CJS','TDZ','AST','IIFE','HOL','LIFO',
-  'BFC','OKLCH','HSL','BEM','specificity',
-  'HMR','RTL','MSW','RTK','SWR','E2E','CRA','CDP',
-  'AVIF','WebP','SEO','GPU','i18n','l10n','CJK','IME','UTF','HTML','CSS','API','CMS','LLM'
-];
+// curated allow-lists of REAL jargon each deck uses but never defines
+const KEEP_BY_DECK = {
+  'frontend': [
+    'WCAG','ARIA','WAI-ARIA','WAI','a11y','POUR','ADA','NVDA','JAWS','APG','APCA','UIA','accname',
+    'LCP','INP','FID','CWV','TTFB','FCP','TBT','RUM','FOIT','FOUT','FOUC','DPR','CSSOM',
+    'SSR','CSR','SSG','RSC','SPA','MFE','MVC','FSM','TTI','hydration',
+    'CORS','SOP','URL','URI','XHR','MIME','CRUD','JSONP','SNI','COOP','COEP','IDN','SSO','W3C','WHATWG','RFC','HTTP methods','BOM',
+    'SRI','HSTS','XFO','clickjacking','prototype pollution',
+    'DOM','JSX','ESM','CJS','TDZ','AST','IIFE','HOL','LIFO',
+    'BFC','OKLCH','HSL','BEM','specificity',
+    'HMR','RTL','MSW','RTK','SWR','E2E','CRA','CDP',
+    'AVIF','WebP','SEO','GPU','i18n','l10n','CJK','IME','UTF','HTML','CSS','API','CMS','LLM'
+  ],
+  'interview-prep': [
+    'NSCC','DTC','DTCC','CCP','CSD','ITP','CNS','FIX','OMS','EMS','SOD','EOD','STP','FTD','CUSIP','ISIN',
+    'T+1','T+2','DvP','PvP',
+    'CFTC','SEC','DCM','FCM','FINRA','SIPC','Reg SHO','Reg NMS','NBBO',
+    'USDC','USDT','CEX','DEX','MPC','AMM','MEV','DeFi','GENIUS Act',
+    'IOC','FOK','GTC','TIF','LOB','OTC','VWAP','TWAP','OHLCV','TCA','MTM',
+    'CDC','OLTP','OLAP','ETL','ELT','CTE','nostro','vostro'
+  ]
+};
+const KEEP = KEEP_BY_DECK[DECK] || [];
 
 // usage-context: up to 2 short snippets per term, drawn from frontend card/glossary/teach text
 const blocks = [];
@@ -44,9 +57,9 @@ function context(term) {
 }
 const TERMS = KEEP.map(t => ({ term: t, uses: context(t) }));
 
-const FE_TOPICS = '[FE-HTML, FE-CSS, FE-CSSARCH, FE-JS, FE-ASYNC, FE-TS, FE-DOM, FE-REACT, FE-STATE, FE-PERF, FE-A11Y, FE-NET, FE-SEC, FE-TEST, FE-SYSDESIGN]';
+const FE_TOPICS = '[' + _deck.topics.join(', ') + ']';
 const FMT = [
-  'You are writing rich, CLICKABLE reference entries for frontend/web jargon that the deck uses but never defines — a curious learner will click these to finally understand them. For EACH term below, produce one complete entry. If a listed token is NOT genuine technical jargon (a stray common word), OMIT it.',
+  'You are writing rich, CLICKABLE reference entries for technical jargon/acronyms that the "' + _deck.name + '" deck uses but never defines — a curious learner will click these to finally understand them. For EACH term below, produce one complete entry. If a listed token is NOT genuine technical jargon (a stray common word), OMIT it.',
   '',
   'Each entry:',
   '- key: kebab-case unique id (e.g. "wcag", "aria", "cors", "core-web-vitals" — for an acronym use the lowercased acronym).',
@@ -67,14 +80,14 @@ const FMT = [
 const BATCH = 11, batches = [];
 for (let i = 0; i < TERMS.length; i += BATCH) batches.push({ id: (i / BATCH) | 0, terms: TERMS.slice(i, i + BATCH) });
 
-const meta = { name: 'frontend-jargon', description: 'Define & make clickable the frontend acronyms/jargon the deck uses but never expands', phases: [{ title: 'Define', detail: 'one agent per batch' }] };
+const meta = { name: DECK + '-jargon', description: 'Define & make clickable the ' + _deck.name + ' acronyms/jargon the deck uses but never expands', phases: [{ title: 'Define', detail: 'one agent per batch' }] };
 const ENTRY = '{type:"object",additionalProperties:false,required:["key","term","group","eli5","full","teach"],properties:{key:{type:"string"},term:{type:"string"},aliases:{type:"array",items:{type:"string"}},group:{type:"string"},eli5:{type:"string"},memory:{type:"string"},full:{type:"string"},worked:{type:"string"},teach:{type:"string"},related:{type:"array",items:{type:"string"}}}}';
 const script =
   'export const meta = ' + JSON.stringify(meta) + ';\n' +
   'const BATCHES = ' + JSON.stringify(batches) + ';\n' +
   'const OUT={type:"object",additionalProperties:false,required:["entries"],properties:{entries:{type:"array",items:' + ENTRY + '}}};\n' +
   'const FMT=' + JSON.stringify(FMT) + ';\n' +
-  'const res = await parallel(BATCHES.map(b => () => agent("Define these frontend jargon terms.\\n\\n"+FMT+"\\n\\nTERMS (with how the deck uses each):\\n"+JSON.stringify(b.terms), {label:"jargon:"+b.id, phase:"Define", effort:"high", schema:OUT})));\n' +
+  'const res = await parallel(BATCHES.map(b => () => agent("Define these jargon terms.\\n\\n"+FMT+"\\n\\nTERMS (with how the deck uses each):\\n"+JSON.stringify(b.terms), {label:"jargon:"+b.id, phase:"Define", effort:"high", schema:OUT})));\n' +
   'return { batches: res.filter(Boolean) };\n';
 fs.writeFileSync(OUT, script);
 console.log('wrote ' + OUT + '\n terms: ' + TERMS.length + ' | batches: ' + batches.length + ' | withContext: ' + TERMS.filter(t => t.uses.length).length);

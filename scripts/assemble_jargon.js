@@ -21,7 +21,7 @@ for (const f of fs.readdirSync(CONTENT).filter(f => f.endsWith('.js')).sort()) {
 const existingKeys = new Set(Object.keys(GLOSSARY_DATA));
 const existingNames = new Set();
 for (const id in GLOSSARY_DATA) { const g = GLOSSARY_DATA[id]; [g.term].concat(g.aliases || []).forEach(n => { if (n) existingNames.add(String(n).toLowerCase()); }); }
-const FE_TOPICS = new Set((DECKS_DATA.find(d => d.id === 'frontend') || {}).topics || []);
+const VALID_GROUPS = new Set(Object.keys(SECTIONS_DATA));
 const safe = s => String(s == null ? '' : s).replace(/<(\/?)(script|style)(\s|>|$)/gi, '&lt;$1$2$3');
 
 const raw = JSON.parse(fs.readFileSync(SRC, 'utf8'));
@@ -43,7 +43,7 @@ const willExist = new Set([...existingKeys, ...keptKeys]);
 let files = 0, total = 0, droppedAlias = 0;
 const byGroup = {};
 for (const e of kept) {
-  const group = FE_TOPICS.has(e.group) ? e.group : 'FE-HTML';
+  const group = VALID_GROUPS.has(e.group) ? e.group : (e.group || '');
   const aliases = (Array.isArray(e.aliases) ? e.aliases : []).filter(a => a && !existingNames.has(String(a).toLowerCase()));
   droppedAlias += (Array.isArray(e.aliases) ? e.aliases.length : 0) - aliases.length;
   const entry = { term: e.term, group };
