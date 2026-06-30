@@ -371,6 +371,14 @@ window.MathJax = {
   .listen-speed { display:flex; align-items:center; justify-content:center; gap:14px; font-size:13px; color:var(--ink-dim); }
   .listen-speed .sm { padding:4px 12px; font-size:12px; } .listen-speed span { font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
   .listen-done { text-align:center; color:var(--good); font-weight:700; margin-top:14px; }
+  .listen-episodes { background:linear-gradient(180deg, rgba(91,157,255,.10), rgba(91,157,255,0)); border:1px solid var(--accent); border-radius:12px; padding:12px; margin:14px 0 6px; }
+  .listen-episodes .le-h { font-size:13px; font-weight:800; color:var(--accent); margin-bottom:8px; }
+  .listen-episodes .le-h span { display:block; font-size:11px; font-weight:500; color:var(--ink-dim); margin-top:2px; }
+  .listen-episodes .le-btn { margin:3px; }
+  .listen-or { font-size:11.5px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.05em; margin:10px 0 2px; }
+  .ep-badge { font-size:11px; font-weight:700; color:var(--accent); background:rgba(91,157,255,.12); border-radius:999px; padding:2px 10px; }
+  .ep-scrub-row { display:flex; align-items:center; gap:10px; margin:18px 0 4px; font-size:12px; color:var(--ink-dim); font-variant-numeric:tabular-nums; }
+  .ep-scrub-row input[type=range] { flex:1; accent-color:var(--accent); }
   /* acronym expansion + equations + examples */
   .expand-sub { color: var(--ink-dim); font-size: 13px; margin: -4px 0 10px; font-style: italic; }
   .equation-block { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
@@ -962,7 +970,7 @@ function htmlToSpeech(html){ let s=String(html||'');
   s=s.replace(/<li[^>]*>/gi,' ').replace(/<\/(li|p|div|h[1-4]|tr|ul|ol)>/gi,'. ').replace(/<br\s*\/?>/gi,'. ').replace(/<[^>]+>/g,' ');
   const ta=document.createElement('textarea'); ta.innerHTML=s; s=ta.value;                          // decode entities
   s=s.replace(/\bT\s*\+\s*([012])\b/g,'T plus $1').replace(/(\d)\s*=\s*([A-Za-z0-9])/g,'$1 equals $2')
-     .replace(/\bP&L\b/g,'P and L').replace(/\s*&\s*/g,' and ').replace(/\s*=\s*/g,' equals ').replace(/\s*\/\s*/g,' slash ')
+     .replace(/\bP&L\b/g,'P and L').replace(/\s*&\s*/g,' and ').replace(/\s*=\s*/g,' equals ').replace(/([A-Za-z0-9])\/([A-Za-z0-9])/g,'$1 or $2')
      .replace(/\bvs\.?\b/gi,'versus').replace(/\be\.g\.?,?/gi,'for example,').replace(/\bi\.e\.?,?/gi,'that is,')
      .replace(/[→↦⇒»]/g,' to ').replace(/\$(\d)/g,'$1 dollars').replace(/(\d)%/g,'$1 percent').replace(/_{3,}/g,' blank ');
   return s.replace(/[`*#>|]/g,' ').replace(/\s*\.(\s*\.)+/g,'. ').replace(/\s+/g,' ').trim(); }
@@ -998,7 +1006,7 @@ function listenPlayCard(){ if(!listen||!listen.playing) return; const g=listen.g
 function listenFinish(){ listenCancel(); if(listen){ listen.playing=false; listen.done=true; } listenWakeOff(); if(mode==='listen') renderListen(document.getElementById('view')); }
 async function listenWakeOn(){ try{ if('wakeLock' in navigator){ listenWake=await navigator.wakeLock.request('screen'); } }catch(e){} }
 function listenWakeOff(){ try{ if(listenWake){ listenWake.release(); listenWake=null; } }catch(e){} }
-function listenTeardown(){ if(!listen) return; listen.playing=false; listenCancel(); listenWakeOff(); }
+function listenTeardown(){ if(!listen) return; if(listen.mode==='episode'){ epTeardown(); return; } listen.playing=false; listenCancel(); listenWakeOff(); }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && listen && listen.playing && !listenWake) listenWakeOn(); });
 function listenToggle(){ if(!listen) return; if(listen.playing){ listen.playing=false; listenCancel(); listenWakeOff(); } else { listen.done=false; listen.playing=true; listenWakeOn(); listenPlayCard(); } listenSetControls(); }
 function listenNext(){ if(!listen) return; const was=listen.playing; listenCancel(); listen.pos=Math.min(listen.queue.length-1, listen.pos+1); if(was){ listen.playing=true; listenPlayCard(); } else listenRenderNow(); }
@@ -1027,6 +1035,7 @@ function renderListen(v){
     v.innerHTML='<div class="quiz-wrap"><div class="qcard listen-card" style="text-align:center">'
       +'<div class="qtext">Listen 🎧</div>'
       +'<p class="rv-sub">Hands-free audio study. It reads each <b>question</b>, pauses so you can answer in your head, then reads the <b>answer</b> — and auto-advances. Perfect for a run or commute.</p>'
+      +(Object.keys(AUDIO_EPISODES).length ? '<div class="listen-episodes"><div class="le-h">🎧 Lock-screen episodes <span>plays in your pocket with the screen off — best for runs</span></div>'+Object.keys(AUDIO_EPISODES).map(id=>'<button class="btn primary le-btn" data-ep="'+id+'">▶ '+AUDIO_EPISODES[id]+'</button>').join('')+'</div><div class="listen-or">— or live read-aloud below (any deck, screen on) —</div>' : '')
       +'<div class="velo-scope">'
       +  '<button class="btn velo-scope-btn on" data-scope="weak">Weak spots'+(due>0?' · '+due+' due':'')+'</button>'
       +  '<button class="btn velo-scope-btn" data-scope="all">All decks · '+CARDS.length+'</button>'
@@ -1041,6 +1050,7 @@ function renderListen(v){
       +'<button class="btn primary" id="listenStart">Start ▶</button>'
       +'<p class="listen-tip">Tip: we keep your screen awake so playback isn’t cut off. (Background/lock-screen audio is coming next.)</p>'
       +'</div></div>';
+    v.querySelectorAll('.le-btn').forEach(b=> b.onclick=()=> listenStartEpisode(b.dataset.ep));
     let scope='weak';
     const btns=[].slice.call(v.querySelectorAll('.velo-scope-btn'));
     btns.forEach(b=> b.onclick=()=>{ btns.forEach(x=>x.classList.remove('on')); b.classList.add('on'); scope=b.dataset.scope; v.querySelector('#listenDeck').value=''; });
@@ -1057,6 +1067,7 @@ function renderListen(v){
     };
     return;
   }
+  if(listen.mode==='episode'){ if(epManifest) renderEpisode(v); return; }
   const c=listen.queue[listen.pos]||listen.queue[0];
   v.innerHTML='<div class="quiz-wrap"><div class="qcard listen-now">'
     +'<div class="listen-top"><span class="listen-prog" id="listenProg">'+(listen.pos+1)+' / '+listen.queue.length+'</span>'
@@ -1079,6 +1090,74 @@ function renderListen(v){
   v.querySelector('#listenSlow').onclick=()=>listenAdjSpeed(-0.1);
   v.querySelector('#listenFast').onclick=()=>listenAdjSpeed(0.1);
   listenSetPhase(); listenSetControls();
+}
+
+/* ---- RUN-GRADE pre-generated audio EPISODES (HTMLAudioElement + Media Session: true lock-screen/background playback) ---- */
+const AUDIO_EPISODES = { 'interview-prep':'Interview Prep' };   // decks that have a pre-generated MP3 episode
+let epAudio=null, epManifest=null, epDeck=null, epCardIdx=-1, epCardMap=null;
+function epCardByFront(front){ if(!epCardMap){ epCardMap={}; CARDS.forEach(c=>{ if(!(c.front in epCardMap)) epCardMap[c.front]=c; }); } return epCardMap[front]; }
+function fmtTime(s){ s=Math.max(0,Math.floor(s||0)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function listenStartEpisode(deckId){
+  const v=document.getElementById('view');
+  if(epAudio){ try{ epAudio.pause(); }catch(e){} }
+  epManifest=null; epDeck=deckId; epCardIdx=-1; listen={ mode:'episode', deck:deckId };
+  epAudio=new Audio('audio/'+deckId+'.mp3'); epAudio.preload='auto';
+  epAudio.addEventListener('timeupdate', epOnTime);
+  epAudio.addEventListener('play', ()=>{ if('mediaSession' in navigator) navigator.mediaSession.playbackState='playing'; epSetPlayBtn(); listenWakeOn(); });
+  epAudio.addEventListener('pause', ()=>{ if('mediaSession' in navigator) navigator.mediaSession.playbackState='paused'; epSetPlayBtn(); });
+  epAudio.addEventListener('loadedmetadata', ()=>{ const s=document.getElementById('epScrub'); if(s) s.max=epAudio.duration||0; epUpdateScrub(); });
+  epAudio.addEventListener('error', ()=>{ if(mode==='listen' && listen && listen.mode==='episode') epUnavailable(v); });
+  const pp=epAudio.play(); if(pp&&pp.catch) pp.catch(()=>{});                                       // start within the click gesture (mobile autoplay)
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center"><div class="qtext">Loading episode…</div><p class="rv-sub">Streaming '+(AUDIO_EPISODES[deckId]||deckId)+' audio.</p></div></div>';
+  fetch('audio/'+deckId+'.json').then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(m=>{ if(!(listen&&listen.mode==='episode')) return; epManifest=m; renderEpisode(v); })
+    .catch(()=>epUnavailable(v));
+}
+function epUnavailable(v){ try{ if(epAudio) epAudio.pause(); }catch(e){}
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center"><div class="qtext">Episode not available yet</div><p class="rv-sub">This deck’s audio episode hasn’t been generated. Use the live read-aloud below in the meantime.</p><div class="nav-row"><button class="btn primary" id="epBack">Back to Listen</button></div></div></div>';
+  const b=document.getElementById('epBack'); if(b) b.onclick=()=>{ listen=null; epManifest=null; renderListen(v); }; }
+function epCurrentIdx(){ if(!epManifest||!epAudio) return 0; const t=epAudio.currentTime, cs=epManifest.cards; let idx=0; for(let i=0;i<cs.length;i++){ if(cs[i].t<=t+0.04) idx=i; else break; } return idx; }
+function epSeekCard(i){ if(!epManifest||!epAudio) return; const cs=epManifest.cards; i=Math.max(0,Math.min(cs.length-1,i)); epAudio.currentTime=cs[i].t+0.02; }
+function epPrev(){ if(!epManifest) return; const i=epCurrentIdx(); epSeekCard(epAudio.currentTime-epManifest.cards[i].t>2.2 ? i : i-1); }
+function epNext(){ epSeekCard(epCurrentIdx()+1); }
+function epToggle(){ if(!epAudio) return; if(epAudio.paused){ const pp=epAudio.play(); if(pp&&pp.catch) pp.catch(()=>{}); } else epAudio.pause(); }
+function epOnTime(){ const i=epCurrentIdx(); if(i!==epCardIdx){ epCardIdx=i; epRenderCard(); epMediaSession(); } epUpdateScrub(); epPositionState(); }
+function epRenderCard(){ const cs=epManifest&&epManifest.cards; if(!cs) return; const m=cs[Math.max(0,epCardIdx)]||cs[0]; if(!m) return; const card=epCardByFront(m.front);
+  const q=document.getElementById('epQ'), a=document.getElementById('epA'), dk=document.querySelector('.ep-deck'), pr=document.getElementById('epProg');
+  if(q) q.innerHTML=m.front; if(a) a.innerHTML=card?card.back:''; if(dk) dk.textContent=(epManifest.name||'')+' · '+(SECTIONS[m.sec]||m.sec); if(pr) pr.textContent=(epCardIdx+1)+' / '+cs.length;
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([document.querySelector('.ep-now')]).catch(()=>{}); }
+function epUpdateScrub(){ const s=document.getElementById('epScrub'); if(s&&epAudio&&!s._drag){ s.value=epAudio.currentTime||0; }
+  const cur=document.getElementById('epCur'), tot=document.getElementById('epTot'); if(cur&&epAudio) cur.textContent=fmtTime(epAudio.currentTime); if(tot&&epAudio) tot.textContent=fmtTime(epAudio.duration); }
+function epSetPlayBtn(){ const b=document.getElementById('epToggleBtn'); if(b&&epAudio) b.textContent=epAudio.paused?'▶':'⏸'; }
+function epPositionState(){ if('mediaSession' in navigator && navigator.mediaSession.setPositionState && epAudio && epAudio.duration && isFinite(epAudio.duration)){ try{ navigator.mediaSession.setPositionState({duration:epAudio.duration, playbackRate:epAudio.playbackRate||1, position:Math.min(epAudio.currentTime,epAudio.duration)}); }catch(e){} } }
+function epMediaSession(){ if(!('mediaSession' in navigator)||!epManifest) return; const m=epManifest.cards[Math.max(0,epCardIdx)]||epManifest.cards[0];
+  try{ navigator.mediaSession.metadata=new MediaMetadata({ title:(m?m.front:epManifest.name).slice(0,140), artist:(m?(SECTIONS[m.sec]||epManifest.name):epManifest.name), album:epManifest.name+' · Audio study' }); }catch(e){}
+  const set=(a,h)=>{ try{ navigator.mediaSession.setActionHandler(a,h); }catch(e){} };
+  set('play',()=>epAudio.play()); set('pause',()=>epAudio.pause()); set('previoustrack',epPrev); set('nexttrack',epNext);
+  set('seekbackward',(d)=>{ epAudio.currentTime=Math.max(0,epAudio.currentTime-((d&&d.seekOffset)||10)); });
+  set('seekforward',(d)=>{ epAudio.currentTime=Math.min(epAudio.duration||1e9,epAudio.currentTime+((d&&d.seekOffset)||10)); });
+  set('seekto',(d)=>{ if(d&&d.seekTime!=null) epAudio.currentTime=d.seekTime; });
+  epPositionState(); }
+function epTeardown(){ if(epAudio){ try{ epAudio.pause(); }catch(e){} } listenWakeOff(); }
+function renderEpisode(v){ const cs=epManifest.cards; const m=cs[Math.max(0,epCardIdx)]||cs[0]; const card=epCardByFront(m.front);
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard ep-now">'
+    +'<div class="listen-top"><span class="listen-prog" id="epProg">'+(Math.max(0,epCardIdx)+1)+' / '+cs.length+'</span>'
+    +  '<span class="ep-badge">🎧 lock-screen episode</span><button class="btn listen-exit" id="epExit">End</button></div>'
+    +'<div class="listen-deck ep-deck">'+(epManifest.name||'')+' · '+(SECTIONS[m.sec]||m.sec)+'</div>'
+    +'<div class="listen-q" id="epQ">'+m.front+'</div>'
+    +'<div class="listen-a" id="epA">'+(card?card.back:'')+'</div>'
+    +'<div class="ep-scrub-row"><span id="epCur">0:00</span><input type="range" id="epScrub" min="0" max="'+(epManifest.durationSec||0)+'" step="1" value="0"><span id="epTot">'+fmtTime(epManifest.durationSec)+'</span></div>'
+    +'<div class="listen-controls"><button class="lc" id="epPrevBtn" title="Previous card">⏮</button>'
+    +  '<button class="lc lc-big" id="epToggleBtn" title="Play / Pause">'+(epAudio&&!epAudio.paused?'⏸':'▶')+'</button>'
+    +  '<button class="lc" id="epNextBtn" title="Next card">⏭</button></div>'
+    +'<p class="listen-tip">Lock your phone and pocket it — playback keeps going, with controls on your lock screen. Keep this in a normal browser tab (not Add-to-Home-Screen) for the most reliable background audio.</p>'
+    +'</div></div>';
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
+  v.querySelector('#epExit').onclick=()=>{ epTeardown(); listen=null; epManifest=null; renderListen(v); };
+  v.querySelector('#epPrevBtn').onclick=epPrev; v.querySelector('#epNextBtn').onclick=epNext; v.querySelector('#epToggleBtn').onclick=epToggle;
+  const s=v.querySelector('#epScrub');
+  s.addEventListener('input',()=>{ s._drag=true; const cur=document.getElementById('epCur'); if(cur) cur.textContent=fmtTime(s.value); });
+  s.addEventListener('change',()=>{ if(epAudio) epAudio.currentTime=+s.value; s._drag=false; });
+  epRenderCard(); epMediaSession(); epSetPlayBtn();
 }
 
 /* ---------- STUDY ---------- */
