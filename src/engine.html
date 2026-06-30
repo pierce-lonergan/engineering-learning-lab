@@ -345,6 +345,32 @@ window.MathJax = {
   .teach .teach-in strong { color: var(--ink); }
   .teach .teach-in .analogy { background: var(--panel2); border-left: 3px solid var(--accent2); border-radius: 0 8px 8px 0; padding: 9px 13px; margin: 11px 0; }
   .teach .teach-in .key { background: rgba(70,211,154,.10); border-left: 3px solid var(--good); border-radius: 0 8px 8px 0; padding: 9px 13px; margin: 11px 0; }
+  /* Listen (passive audio) mode */
+  .listen-card .listen-opts { display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; margin:14px 0; text-align:left; }
+  .listen-card .listen-opts label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--ink-dim); font-weight:600; }
+  .listen-card .listen-opts label input[type=range]{ width:100%; }
+  .listen-card .listen-opts label b { color:var(--accent); font-size:12.5px; }
+  .listen-tip { font-size:11.5px; color:var(--ink-dim); opacity:.85; margin-top:10px; }
+  @media(max-width:560px){ .listen-card .listen-opts { grid-template-columns:1fr; } }
+  .listen-now { max-width:780px; }
+  .listen-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  .listen-prog { font-size:13px; color:var(--ink-dim); font-variant-numeric:tabular-nums; }
+  .listen-phase { font-size:13px; font-weight:700; color:var(--accent); }
+  .listen-exit { padding:4px 12px; font-size:12px; }
+  .listen-deck { font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim); margin-bottom:8px; }
+  .listen-q { font-size:20px; font-weight:700; line-height:1.4; margin-bottom:14px; transition:color .2s; }
+  .listen-q.on { color:var(--accent); }
+  .listen-a { font-size:15px; line-height:1.6; color:var(--ink); border-top:1px solid var(--line); padding-top:14px; transition:opacity .25s; }
+  .listen-a.hide { opacity:0; }
+  .listen-a.on { box-shadow:-3px 0 0 var(--good); padding-left:10px; }
+  .listen-controls { display:flex; align-items:center; justify-content:center; gap:18px; margin:22px 0 8px; }
+  .listen-controls .lc { width:54px; height:54px; border-radius:50%; border:1px solid var(--line); background:var(--panel2); color:var(--ink); font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .1s, background .2s; }
+  .listen-controls .lc:hover { background:var(--panel); }
+  .listen-controls .lc:active { transform:scale(.92); }
+  .listen-controls .lc-big { width:72px; height:72px; font-size:30px; background:var(--accent); color:#06122b; border-color:var(--accent); }
+  .listen-speed { display:flex; align-items:center; justify-content:center; gap:14px; font-size:13px; color:var(--ink-dim); }
+  .listen-speed .sm { padding:4px 12px; font-size:12px; } .listen-speed span { font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .listen-done { text-align:center; color:var(--good); font-weight:700; margin-top:14px; }
   /* acronym expansion + equations + examples */
   .expand-sub { color: var(--ink-dim); font-size: 13px; margin: -4px 0 10px; font-style: italic; }
   .equation-block { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
@@ -433,6 +459,7 @@ window.MathJax = {
     <button class="tab" data-mode="exam">Exam</button>
     <button class="tab" data-mode="review">Review <span class="due-badge" id="dueBadge"></span></button>
     <button class="tab" data-mode="velocity">Velocity ⚡</button>
+    <button class="tab" data-mode="listen">Listen 🎧</button>
   </div>
   <div class="search">
     <input id="searchBox" type="text" placeholder="Search any concept…" autocomplete="off">
@@ -906,6 +933,7 @@ let studyDeckSel = 'ALL';    // deck id or 'ALL'
 let studyShowBack = false;
 
 function setMode(m){
+  if(mode==='listen' && m!=='listen' && typeof listenTeardown==='function') listenTeardown();   // stop audio when leaving Listen
   mode = m;
   if(m!=='exam') clearInterval(examTimer);
   document.querySelectorAll('.tab').forEach(t=> t.classList.toggle('active', t.dataset.mode===m));
@@ -920,7 +948,137 @@ function render(){
   else if(mode==='test') renderTest(v);
   else if(mode==='exam') renderExam(v);
   else if(mode==='velocity') renderVelocity(v);
+  else if(mode==='listen') renderListen(v);
   else renderReview(v);
+}
+
+/* ---------- LISTEN (passive hands-free audio study) ---------- */
+let listen=null, listenWake=null, listenVoices=[];
+const LISTEN_PREF_KEY='ell_listen_v1';
+function listenSupported(){ return 'speechSynthesis' in window; }
+function listenPrefs(){ try{ return Object.assign({speed:1,pauseMs:2500,detail:'full',voice:''}, JSON.parse(localStorage.getItem(LISTEN_PREF_KEY)||'{}')); }catch(e){ return {speed:1,pauseMs:2500,detail:'full',voice:''}; } }
+function listenSavePrefs(p){ try{ localStorage.setItem(LISTEN_PREF_KEY, JSON.stringify({speed:p.speed,pauseMs:p.pauseMs,detail:p.detail,voice:p.voice})); }catch(e){} }
+function htmlToSpeech(html){ let s=String(html||'');
+  s=s.replace(/<li[^>]*>/gi,' ').replace(/<\/(li|p|div|h[1-4]|tr|ul|ol)>/gi,'. ').replace(/<br\s*\/?>/gi,'. ').replace(/<[^>]+>/g,' ');
+  const ta=document.createElement('textarea'); ta.innerHTML=s; s=ta.value;                          // decode entities
+  s=s.replace(/\bT\s*\+\s*([012])\b/g,'T plus $1').replace(/(\d)\s*=\s*([A-Za-z0-9])/g,'$1 equals $2')
+     .replace(/\bP&L\b/g,'P and L').replace(/\s*&\s*/g,' and ').replace(/\s*=\s*/g,' equals ').replace(/\s*\/\s*/g,' slash ')
+     .replace(/\bvs\.?\b/gi,'versus').replace(/\be\.g\.?,?/gi,'for example,').replace(/\bi\.e\.?,?/gi,'that is,')
+     .replace(/[→↦⇒»]/g,' to ').replace(/\$(\d)/g,'$1 dollars').replace(/(\d)%/g,'$1 percent').replace(/_{3,}/g,' blank ');
+  return s.replace(/[`*#>|]/g,' ').replace(/\s*\.(\s*\.)+/g,'. ').replace(/\s+/g,' ').trim(); }
+function listenChunks(text){ const parts=text.split(/(?<=[.!?;:])\s+/).filter(x=>x.trim()); const out=[]; let b='';
+  for(const p of parts){ if((b+' '+p).length>200){ if(b) out.push(b.trim()); b=p; } else b=b?b+' '+p:p; } if(b.trim()) out.push(b.trim());
+  return out.length?out:[text]; }
+function listenInitVoices(){ if(!window.speechSynthesis) return; listenVoices=speechSynthesis.getVoices()||[];
+  if(!listenVoices.length){ try{ speechSynthesis.onvoiceschanged=function(){ listenVoices=speechSynthesis.getVoices()||[]; speechSynthesis.onvoiceschanged=null; if(mode==='listen' && !listen) renderListen(document.getElementById('view')); }; }catch(e){} } }
+function listenDefaultVoice(){ const en=listenVoices.filter(v=>/^en\b|^en[-_]/i.test(v.lang));
+  const pref=['Google US English','Microsoft Aria','Aria','Samantha','Microsoft Guy','Microsoft Jenny','Daniel','Natural','Google UK English'];
+  for(const p of pref){ const m=en.find(v=>v.name.indexOf(p)>=0); if(m) return m.name; } return ((en[0]||listenVoices[0])||{}).name||''; }
+function listenStale(g){ return !listen || !listen.playing || listen.gen!==g; }
+function listenCancel(){ if(!listen) return; listen.gen=(listen.gen||0)+1; try{ speechSynthesis.cancel(); }catch(e){} if(listen._t){ clearTimeout(listen._t); listen._t=null; } }
+function listenSpeakSeq(chunks, g, done){ let i=0; (function nxt(){ if(listenStale(g)) return; if(i>=chunks.length){ done&&done(); return; }
+  const u=new SpeechSynthesisUtterance(chunks[i++]); u.rate=listen.speed; u.pitch=1;
+  const v=listenVoices.find(x=>x.name===listen.voice); if(v){ u.voice=v; u.lang=v.lang; }
+  u.onend=()=>{ if(!listenStale(g)) nxt(); }; u.onerror=()=>{ if(!listenStale(g)) nxt(); };
+  try{ speechSynthesis.speak(u); }catch(e){ nxt(); } })(); }
+function listenPlayCard(){ if(!listen||!listen.playing) return; const g=listen.gen; const c=listen.queue[listen.pos];
+  if(!c){ listenFinish(); return; }
+  listenRenderNow();
+  const front=htmlToSpeech(c.front);
+  const back=listen.detail==='key' ? htmlToSpeech(firstSentence(stripHtml(c.back))) : htmlToSpeech(c.back);
+  listen.phase='front'; listenSetPhase();
+  listenSpeakSeq(listenChunks(front), g, ()=>{
+    listen.phase='think'; listenSetPhase();
+    listen._t=setTimeout(()=>{ if(listenStale(g)) return; listen.phase='back'; listenSetPhase();
+      listenSpeakSeq(listenChunks(back), g, ()=>{
+        listen._t=setTimeout(()=>{ if(listenStale(g)) return; if(listen.pos>=listen.queue.length-1){ listenFinish(); return; } listen.pos++; listenPlayCard(); }, 800);
+      });
+    }, listen.pauseMs);
+  }); }
+function listenFinish(){ listenCancel(); if(listen){ listen.playing=false; listen.done=true; } listenWakeOff(); if(mode==='listen') renderListen(document.getElementById('view')); }
+async function listenWakeOn(){ try{ if('wakeLock' in navigator){ listenWake=await navigator.wakeLock.request('screen'); } }catch(e){} }
+function listenWakeOff(){ try{ if(listenWake){ listenWake.release(); listenWake=null; } }catch(e){} }
+function listenTeardown(){ if(!listen) return; listen.playing=false; listenCancel(); listenWakeOff(); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && listen && listen.playing && !listenWake) listenWakeOn(); });
+function listenToggle(){ if(!listen) return; if(listen.playing){ listen.playing=false; listenCancel(); listenWakeOff(); } else { listen.done=false; listen.playing=true; listenWakeOn(); listenPlayCard(); } listenSetControls(); }
+function listenNext(){ if(!listen) return; const was=listen.playing; listenCancel(); listen.pos=Math.min(listen.queue.length-1, listen.pos+1); if(was){ listen.playing=true; listenPlayCard(); } else listenRenderNow(); }
+function listenPrev(){ if(!listen) return; const was=listen.playing; listenCancel(); listen.pos=Math.max(0, listen.pos-1); if(was){ listen.playing=true; listenPlayCard(); } else listenRenderNow(); }
+function listenReplay(){ if(!listen) return; listenCancel(); listen.done=false; listen.playing=true; listenWakeOn(); listenPlayCard(); listenSetControls(); }
+function listenAdjSpeed(d){ if(!listen) return; listen.speed=Math.max(0.7, Math.min(1.8, +(listen.speed+d).toFixed(2))); listenSavePrefs(listen); const s=document.getElementById('listenSpeedNow'); if(s) s.textContent=listen.speed.toFixed(2)+'×'; }
+function listenRenderNow(){ if(!listen || mode!=='listen') return; const q=document.getElementById('listenQ');
+  if(!q){ renderListen(document.getElementById('view')); return; }
+  const c=listen.queue[listen.pos]; if(!c) return;
+  const pr=document.getElementById('listenProg'); if(pr) pr.textContent=(listen.pos+1)+' / '+listen.queue.length;
+  const dk=document.querySelector('.listen-deck'); if(dk) dk.textContent=((TOPIC2DECK[c.sec]||{}).name||'')+' · '+(SECTIONS[c.sec]||c.sec);
+  q.innerHTML=c.front; const a=document.getElementById('listenA'); if(a) a.innerHTML=c.back;
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([document.querySelector('.listen-now')]).catch(()=>{}); }
+function listenSetPhase(){ if(!listen) return; const el=document.getElementById('listenPhase'); if(el){ const m={front:'❓ Question',think:'🤔 Recall it…',back:'💡 Answer'}; el.textContent=m[listen.phase]||''; }
+  const q=document.getElementById('listenQ'), a=document.getElementById('listenA');
+  if(q&&a){ q.classList.toggle('on', listen.phase==='front'); a.classList.toggle('on', listen.phase==='back'); a.classList.toggle('hide', listen.phase==='front'||listen.phase==='think'); } }
+function listenSetControls(){ const t=document.getElementById('listenToggleBtn'); if(t&&listen) t.textContent=listen.playing?'⏸':'▶'; }
+function renderListen(v){
+  if(!listenSupported()){ v.innerHTML='<div class="quiz-wrap"><div class="qcard" style="text-align:center"><div class="qtext">Listen 🎧</div><p class="rv-sub">This browser doesn’t support speech synthesis. Try Chrome, Edge, or Safari.</p></div></div>'; return; }
+  listenInitVoices();
+  if(!listen){
+    const p=listenPrefs(); if(!p.voice) p.voice=listenDefaultVoice();
+    const decksWithCards=DECKS.filter(d=>(d.topics||[]).some(t=>CARDS.some(c=>c.sec===t)));
+    const due=srsDueCount();
+    const voiceOpts=listenVoices.filter(vo=>/^en\b|^en[-_]/i.test(vo.lang)).map(vo=>'<option value="'+vo.name.replace(/"/g,'&quot;')+'"'+(vo.name===p.voice?' selected':'')+'>'+vo.name+'</option>').join('') || '<option value="">System default</option>';
+    v.innerHTML='<div class="quiz-wrap"><div class="qcard listen-card" style="text-align:center">'
+      +'<div class="qtext">Listen 🎧</div>'
+      +'<p class="rv-sub">Hands-free audio study. It reads each <b>question</b>, pauses so you can answer in your head, then reads the <b>answer</b> — and auto-advances. Perfect for a run or commute.</p>'
+      +'<div class="velo-scope">'
+      +  '<button class="btn velo-scope-btn on" data-scope="weak">Weak spots'+(due>0?' · '+due+' due':'')+'</button>'
+      +  '<button class="btn velo-scope-btn" data-scope="all">All decks · '+CARDS.length+'</button>'
+      +'</div>'
+      +'<select id="listenDeck" class="bp-select"><option value="">— or one deck (in order) —</option>'+decksWithCards.map(d=>'<option value="deck:'+d.id+'">'+d.name+' ('+CARDS.filter(c=>(d.topics||[]).indexOf(c.sec)>=0).length+')</option>').join('')+'</select>'
+      +'<div class="listen-opts">'
+      +  '<label>Voice<select id="listenVoice" class="bp-select">'+voiceOpts+'</select></label>'
+      +  '<label>Speed <input type="range" id="listenSpeed" min="0.7" max="1.6" step="0.05" value="'+p.speed+'"><b id="listenSpeedV">'+(+p.speed).toFixed(2)+'×</b></label>'
+      +  '<label>Think-pause <input type="range" id="listenPause" min="0" max="6000" step="500" value="'+p.pauseMs+'"><b id="listenPauseV">'+(p.pauseMs/1000).toFixed(1)+'s</b></label>'
+      +  '<label>Answer<select id="listenDetail" class="bp-select"><option value="full"'+(p.detail==='full'?' selected':'')+'>Full answer</option><option value="key"'+(p.detail==='key'?' selected':'')+'>Key point only</option></select></label>'
+      +'</div>'
+      +'<button class="btn primary" id="listenStart">Start ▶</button>'
+      +'<p class="listen-tip">Tip: we keep your screen awake so playback isn’t cut off. (Background/lock-screen audio is coming next.)</p>'
+      +'</div></div>';
+    let scope='weak';
+    const btns=[].slice.call(v.querySelectorAll('.velo-scope-btn'));
+    btns.forEach(b=> b.onclick=()=>{ btns.forEach(x=>x.classList.remove('on')); b.classList.add('on'); scope=b.dataset.scope; v.querySelector('#listenDeck').value=''; });
+    v.querySelector('#listenDeck').onchange=e=>{ if(e.target.value){ scope=e.target.value; btns.forEach(x=>x.classList.remove('on')); } else { scope='weak'; btns[0].classList.add('on'); } };
+    const sp=v.querySelector('#listenSpeed'), pa=v.querySelector('#listenPause');
+    sp.oninput=()=>{ v.querySelector('#listenSpeedV').textContent=(+sp.value).toFixed(2)+'×'; };
+    pa.oninput=()=>{ v.querySelector('#listenPauseV').textContent=((+pa.value)/1000).toFixed(1)+'s'; };
+    v.querySelector('#listenStart').onclick=()=>{
+      const queue=veloPool(scope); if(!queue.length) return;
+      const prefs={ speed:+sp.value, pauseMs:+pa.value, detail:v.querySelector('#listenDetail').value, voice:v.querySelector('#listenVoice').value };
+      listenSavePrefs(prefs);
+      listen={ scope, queue, pos:0, playing:true, gen:0, phase:'front', _t:null, done:false, speed:prefs.speed, pauseMs:prefs.pauseMs, detail:prefs.detail, voice:prefs.voice };
+      listenWakeOn(); renderListen(v); listenPlayCard();                                            // first speak() runs inside this click gesture (mobile autoplay)
+    };
+    return;
+  }
+  const c=listen.queue[listen.pos]||listen.queue[0];
+  v.innerHTML='<div class="quiz-wrap"><div class="qcard listen-now">'
+    +'<div class="listen-top"><span class="listen-prog" id="listenProg">'+(listen.pos+1)+' / '+listen.queue.length+'</span>'
+    +  '<span class="listen-phase" id="listenPhase"></span><button class="btn listen-exit" id="listenExit">End</button></div>'
+    +'<div class="listen-deck">'+((TOPIC2DECK[c.sec]||{}).name||'')+' · '+(SECTIONS[c.sec]||c.sec)+'</div>'
+    +'<div class="listen-q" id="listenQ">'+c.front+'</div>'
+    +'<div class="listen-a hide" id="listenA">'+c.back+'</div>'
+    +'<div class="listen-controls"><button class="lc" id="listenPrevBtn" title="Previous">⏮</button>'
+    +  '<button class="lc lc-big" id="listenToggleBtn" title="Play / Pause">'+(listen.playing?'⏸':'▶')+'</button>'
+    +  '<button class="lc" id="listenNextBtn" title="Next">⏭</button><button class="lc" id="listenReplayBtn" title="Replay this card">🔁</button></div>'
+    +'<div class="listen-speed"><button class="btn sm" id="listenSlow">– slower</button><span id="listenSpeedNow">'+listen.speed.toFixed(2)+'×</span><button class="btn sm" id="listenFast">faster +</button></div>'
+    +(listen.done?'<div class="listen-done">✓ Session complete — replay or pick a new scope.</div>':'')
+    +'</div></div>';
+  if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([v]).catch(()=>{});
+  v.querySelector('#listenExit').onclick=()=>{ listenTeardown(); listen=null; renderListen(v); };
+  v.querySelector('#listenPrevBtn').onclick=listenPrev;
+  v.querySelector('#listenNextBtn').onclick=listenNext;
+  v.querySelector('#listenReplayBtn').onclick=listenReplay;
+  v.querySelector('#listenToggleBtn').onclick=listenToggle;
+  v.querySelector('#listenSlow').onclick=()=>listenAdjSpeed(-0.1);
+  v.querySelector('#listenFast').onclick=()=>listenAdjSpeed(0.1);
+  listenSetPhase(); listenSetControls();
 }
 
 /* ---------- STUDY ---------- */
